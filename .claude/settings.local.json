@@ -14,7 +14,19 @@
       "PowerShell(Get-ChildItem -Force -Recurse -Depth 3 D:\\\\mydata\\\\claude-code\\\\Helpdesk\\\\server -Exclude node_modules | Where-Object { $_.FullName -notmatch 'node_modules' } | Select-Object FullName | Out-String -Width 200)",
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
-      "PowerShell(Get-ChildItem *)"
+      "PowerShell(Get-ChildItem *)",
+      "Bash(git config *)",
+      "Bash(where psql *)",
+      "Read(//c/Program Files/PostgreSQL/**)",
+      "Bash(export PGPASSWORD='postgres@2026')",
+      "Bash(\"/c/Program Files/PostgreSQL/18/bin/psql.exe\" -U postgres -h localhost -p 5432 -l)",
+      "Bash(PGPASSWORD='postgres@2026' /c/Program Files/PostgreSQL/18/bin/psql.exe *)",
+      "Bash(PGPASSWORD='Postgres@2026' /c/Program Files/PostgreSQL/18/bin/psql.exe *)",
+      "Bash(bun add *)",
+      "Bash(bunx prisma *)",
+      "Bash(bun -e 'import { prisma } from '\\\\''./src/db.ts'\\\\''; const r = await prisma.$queryRawUnsafe\\('\\\\''SELECT 1 as ok'\\\\''\\); console.log\\(r\\); await prisma.$disconnect\\(\\);')",
+      "Bash(bun run *)",
+      "Bash(bun -e 'import { prisma } from '\\\\''./src/db.ts'\\\\''; const r = await prisma.$queryRawUnsafe\\('\\\\''SELECT current_database\\(\\) as db'\\\\''\\); console.log\\(r\\); await prisma.$disconnect\\(\\);')"
     ]
   }
 }
