@@ -9,7 +9,7 @@ tickets, and suggest replies — reducing manual work for support agents.
 - **Backend**: Node.js + Express + TypeScript (Bun runtime)
 - **Database**: PostgreSQL + Prisma
 - **AI**: Claude API (Anthropic)
-- **Authentication**: Database-backed sessions (`express-session` + `connect-pg-simple`)
+- **Authentication**: Better Auth, email/password with database-backed sessions (via Prisma)
 
 ## Project Structure
 ```
