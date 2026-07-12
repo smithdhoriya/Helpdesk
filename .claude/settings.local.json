@@ -26,7 +26,9 @@
       "Bash(bunx prisma *)",
       "Bash(bun -e 'import { prisma } from '\\\\''./src/db.ts'\\\\''; const r = await prisma.$queryRawUnsafe\\('\\\\''SELECT 1 as ok'\\\\''\\); console.log\\(r\\); await prisma.$disconnect\\(\\);')",
       "Bash(bun run *)",
-      "Bash(bun -e 'import { prisma } from '\\\\''./src/db.ts'\\\\''; const r = await prisma.$queryRawUnsafe\\('\\\\''SELECT current_database\\(\\) as db'\\\\''\\); console.log\\(r\\); await prisma.$disconnect\\(\\);')"
+      "Bash(bun -e 'import { prisma } from '\\\\''./src/db.ts'\\\\''; const r = await prisma.$queryRawUnsafe\\('\\\\''SELECT current_database\\(\\) as db'\\\\''\\); console.log\\(r\\); await prisma.$disconnect\\(\\);')",
+      "Bash(curl *)",
+      "Bash(taskkill //F //IM bun.exe)"
     ]
   }
 }
