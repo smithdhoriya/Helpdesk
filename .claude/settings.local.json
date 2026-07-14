@@ -40,7 +40,13 @@
       "Bash(node drive2.js)",
       "Bash(node drive3.js)",
       "Bash(node drive4.js)",
-      "Bash(node drive5.js)"
+      "Bash(node drive5.js)",
+      "Bash(bunx shadcn@latest init --help)",
+      "Bash(bunx shadcn@latest init --preset)",
+      "Bash(bunx shadcn@latest init --preset invalid)",
+      "Bash(bunx shadcn@latest *)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(pkill -f \"bun run dev\")"
     ]
   }
 }

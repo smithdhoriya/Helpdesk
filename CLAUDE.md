@@ -5,11 +5,20 @@ A ticket management system that uses AI to classify support emails, summarize
 tickets, and suggest replies — reducing manual work for support agents.
 
 ## Tech Stack
-- **Frontend**: React + TypeScript, Tailwind CSS, React Router
+- **Frontend**: React + TypeScript, Tailwind CSS, shadcn/ui, React Router
 - **Backend**: Node.js + Express + TypeScript (Bun runtime)
 - **Database**: PostgreSQL + Prisma
 - **AI**: Claude API (Anthropic)
 - **Authentication**: Better Auth, email/password with database-backed sessions (via Prisma)
+
+## Authentication
+- Better Auth (`server/src/auth.ts`) with the Prisma adapter (`postgresql`), mounted at `/api/auth/*` via `toNodeHandler` — mounted before `express.json()` so Better Auth's own body parsing isn't interfered with.
+- Email/password only; sign-up is disabled (`disableSignUp: true`). New users are provisioned only via `bun run db:seed` (`server/prisma/seed.ts`), which reads `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` from the environment.
+- Users have a `role` field (`UserRole` enum: `admin` / `agent`), defaulting to `agent`.
+- `requireAuth` middleware (`server/src/middleware/require-auth.ts`) validates the session server-side and attaches `req.user` / `req.session`; use it on any route that needs auth.
+- CORS is locked to `TRUSTED_ORIGIN` (server) / `http://localhost:5173` with `credentials: true`, since Better Auth relies on cookies.
+- Client: `authClient` (`client/src/lib/auth-client.ts`, `better-auth/react`) points at the API `baseURL`. `ProtectedRoute` (`client/src/components/ProtectedRoute.tsx`) gates routes on `authClient.useSession()`, redirecting to `/login` when there's no session.
+- Required env vars are documented in `server/.env.example` (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `TRUSTED_ORIGIN`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`).
 
 ## Project Structure
 ```
@@ -34,5 +43,6 @@ Both apps are containerized with Docker and deployed to a cloud provider
 ## Key Conventions
 - Always use Context7 to fetch the latest official docs before writing code.
 - Follow `implementation-plan.md` and build one phase at a time.
+- Build UI with shadcn/ui components on top of Tailwind CSS; add new components via `bunx shadcn@latest add <component>` rather than hand-rolling primitives.
 - Write clean, modular code — no unnecessary abstractions.
 - Do not change the locked tech stack without explicit approval.

@@ -1,10 +1,20 @@
 import { useEffect, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { Controller, useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
 import { z } from "zod"
 
 import { authClient } from "../lib/auth-client"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 
 const loginSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email"),
@@ -18,9 +28,9 @@ function Login() {
   const { data: session } = authClient.useSession()
   const [error, setError] = useState<string | null>(null)
   const {
-    register,
+    control,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { isSubmitting },
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) })
 
   // signIn.email() resolving doesn't mean useSession()'s store has picked up
@@ -41,77 +51,68 @@ function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-md">
-        <div className="mb-6 flex flex-col items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-500 text-base font-bold text-white">
+    <div className="flex min-h-screen items-center justify-center bg-muted/30">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="items-center text-center">
+          <span className="mb-2 flex h-10 w-10 items-center justify-center rounded-md bg-primary text-base font-bold text-primary-foreground">
             H
           </span>
-          <h1 className="text-center text-2xl font-semibold tracking-tight text-gray-900">
-            Helpdesk Login
-          </h1>
-        </div>
+          <CardTitle className="text-2xl">Helpdesk Login</CardTitle>
+          <CardDescription>Sign in to manage support tickets</CardDescription>
+        </CardHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label
-              htmlFor="email"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              {...register("email")}
-              className={`w-full rounded-md border px-3 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
-                errors.email
-                  ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500"
-                  : "border-gray-300 focus-visible:border-blue-500 focus-visible:ring-blue-500"
-              }`}
-            />
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.email.message}
-              </p>
-            )}
-          </div>
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <FieldGroup>
+              <Controller
+                name="email"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>Email</FieldLabel>
+                    <Input
+                      {...field}
+                      id={field.name}
+                      type="email"
+                      aria-invalid={fieldState.invalid}
+                      autoComplete="email"
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
 
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              {...register("password")}
-              className={`w-full rounded-md border px-3 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
-                errors.password
-                  ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500"
-                  : "border-gray-300 focus-visible:border-blue-500 focus-visible:ring-blue-500"
-              }`}
-            />
-            {errors.password && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.password.message}
-              </p>
-            )}
-          </div>
+              <Controller
+                name="password"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>Password</FieldLabel>
+                    <Input
+                      {...field}
+                      id={field.name}
+                      type="password"
+                      aria-invalid={fieldState.invalid}
+                      autoComplete="current-password"
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+              {error && <FieldError>{error}</FieldError>}
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50"
-          >
-            {isSubmitting ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
-      </div>
+              <Button type="submit" disabled={isSubmitting} className="w-full">
+                {isSubmitting ? "Signing in..." : "Sign in"}
+              </Button>
+            </FieldGroup>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }
