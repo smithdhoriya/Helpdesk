@@ -15,14 +15,21 @@ function NavBar() {
   }
 
   return (
-    <nav className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
-      <span className="text-lg font-semibold text-gray-900">Helpdesk</span>
+    <nav className="sticky top-0 z-10 flex items-center justify-between bg-slate-900 px-6 py-4 shadow-md">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-500 text-sm font-bold text-white">
+          H
+        </span>
+        <span className="text-lg font-semibold tracking-tight text-white">
+          Helpdesk
+        </span>
+      </div>
       <div className="flex items-center gap-4">
-        <span className="text-sm text-gray-700">{session?.user.name}</span>
+        <span className="text-sm text-slate-300">{session?.user.name}</span>
         <button
           type="button"
           onClick={handleSignOut}
-          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="rounded-md border border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
         >
           Sign out
         </button>

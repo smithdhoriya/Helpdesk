@@ -1,16 +1,27 @@
 import { useEffect, useState } from "react"
-import type { FormEvent } from "react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
+import { z } from "zod"
 
 import { authClient } from "../lib/auth-client"
+
+const loginSchema = z.object({
+  email: z.string().min(1, "Email is required").email("Invalid email"),
+  password: z.string().min(1, "Password is required"),
+})
+
+type LoginForm = z.infer<typeof loginSchema>
 
 function Login() {
   const navigate = useNavigate()
   const { data: session } = authClient.useSession()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) })
 
   // signIn.email() resolving doesn't mean useSession()'s store has picked up
   // the new session yet (it refetches in the background), so redirect
@@ -19,14 +30,10 @@ function Login() {
     if (session) navigate("/", { replace: true })
   }, [session, navigate])
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
+  async function onSubmit(data: LoginForm) {
     setError(null)
-    setSubmitting(true)
 
-    const { error } = await authClient.signIn.email({ email, password })
-
-    setSubmitting(false)
+    const { error } = await authClient.signIn.email(data)
 
     if (error) {
       setError(error.message ?? "Failed to sign in")
@@ -35,12 +42,17 @@ function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
-        <h1 className="mb-6 text-center text-2xl font-semibold text-gray-900">
-          Helpdesk Login
-        </h1>
+      <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-md">
+        <div className="mb-6 flex flex-col items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-500 text-base font-bold text-white">
+            H
+          </span>
+          <h1 className="text-center text-2xl font-semibold tracking-tight text-gray-900">
+            Helpdesk Login
+          </h1>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <label
               htmlFor="email"
@@ -51,11 +63,18 @@ function Login() {
             <input
               id="email"
               type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              {...register("email")}
+              className={`w-full rounded-md border px-3 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+                errors.email
+                  ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500"
+                  : "border-gray-300 focus-visible:border-blue-500 focus-visible:ring-blue-500"
+              }`}
             />
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.email.message}
+              </p>
+            )}
           </div>
 
           <div>
@@ -68,21 +87,28 @@ function Login() {
             <input
               id="password"
               type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              {...register("password")}
+              className={`w-full rounded-md border px-3 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+                errors.password
+                  ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500"
+                  : "border-gray-300 focus-visible:border-blue-500 focus-visible:ring-blue-500"
+              }`}
             />
+            {errors.password && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.password.message}
+              </p>
+            )}
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
           <button
             type="submit"
-            disabled={submitting}
-            className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            disabled={isSubmitting}
+            className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50"
           >
-            {submitting ? "Signing in..." : "Sign in"}
+            {isSubmitting ? "Signing in..." : "Sign in"}
           </button>
         </form>
       </div>

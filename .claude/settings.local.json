@@ -28,7 +28,19 @@
       "Bash(bun run *)",
       "Bash(bun -e 'import { prisma } from '\\\\''./src/db.ts'\\\\''; const r = await prisma.$queryRawUnsafe\\('\\\\''SELECT current_database\\(\\) as db'\\\\''\\); console.log\\(r\\); await prisma.$disconnect\\(\\);')",
       "Bash(curl *)",
-      "Bash(taskkill //F //IM bun.exe)"
+      "Bash(taskkill //F //IM bun.exe)",
+      "Bash(bunx tsc *)",
+      "Skill(run)",
+      "Bash(node -e \"console.log\\(require.resolve\\('playwright'\\)\\)\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\dhori\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--mydata-claude-code-Helpdesk\\\\7eb35071-f5f6-44f8-b767-172a5afdc890\\\\scratchpad\\\\pw\")",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(npx playwright *)",
+      "Bash(node drive.js)",
+      "Bash(node drive2.js)",
+      "Bash(node drive3.js)",
+      "Bash(node drive4.js)",
+      "Bash(node drive5.js)"
     ]
   }
 }
