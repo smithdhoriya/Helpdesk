@@ -17,7 +17,7 @@ tickets, and suggest replies — reducing manual work for support agents.
 - Users have a `role` field (`UserRole` enum: `admin` / `agent`), defaulting to `agent`.
 - `requireAuth` middleware (`server/src/middleware/require-auth.ts`) validates the session server-side and attaches `req.user` / `req.session`; use it on any route that needs auth.
 - CORS is locked to `TRUSTED_ORIGIN` (server) / `http://localhost:5173` with `credentials: true`, since Better Auth relies on cookies.
-- Client: `authClient` (`client/src/lib/auth-client.ts`, `better-auth/react`) points at the API `baseURL`. `ProtectedRoute` (`client/src/components/ProtectedRoute.tsx`) gates routes on `authClient.useSession()`, redirecting to `/login` when there's no session.
+- Client: `authClient` (`client/src/lib/auth-client.ts`, `better-auth/react`) points at the API `baseURL` and registers the `inferAdditionalFields` plugin (with an explicit `role` schema, since `client/` can't import the server's `auth` export across packages) so `session.user.role` is typed as `"admin" | "agent"`. `ProtectedRoute` (`client/src/components/ProtectedRoute.tsx`) gates routes on `authClient.useSession()`, redirecting to `/login` when there's no session. `AdminRoute` (`client/src/components/AdminRoute.tsx`) additionally redirects to `/` when `session.user.role !== "admin"` — nest routes under it for admin-only pages (e.g. `/users` in `client/src/App.tsx`). `NavBar` conditionally shows admin-only links based on `session.user.role`.
 - Required env vars are documented in `server/.env.example` (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `TRUSTED_ORIGIN`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`).
 
 ## Project Structure

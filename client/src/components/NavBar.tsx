@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router"
+import { Link, useNavigate } from "react-router"
 
 import { authClient } from "../lib/auth-client"
 
@@ -25,6 +25,14 @@ function NavBar() {
         </span>
       </div>
       <div className="flex items-center gap-4">
+        {session?.user.role === "admin" && (
+          <Link
+            to="/users"
+            className="text-sm font-medium text-slate-300 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+          >
+            Users
+          </Link>
+        )}
         <span className="text-sm text-slate-300">{session?.user.name}</span>
         <button
           type="button"
