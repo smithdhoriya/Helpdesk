@@ -7,7 +7,7 @@ import { UserRole } from "./generated/client/enums";
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   emailAndPassword: { enabled: true, disableSignUp: true },
-  trustedOrigins: ["http://localhost:5173"],
+  trustedOrigins: [process.env.TRUSTED_ORIGIN!],
   user: {
     additionalFields: {
       role: {
