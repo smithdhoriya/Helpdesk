@@ -47,7 +47,10 @@
       "Bash(bunx shadcn@latest *)",
       "Bash(pkill -f \"vite\")",
       "Bash(pkill -f \"bun run dev\")",
-      "Bash(bun prisma/create-agent.ts)"
+      "Bash(bun prisma/create-agent.ts)",
+      "Bash(node -e ' *)",
+      "Bash(bun x *)",
+      "Bash(pkill -f \"bun --watch src/index.ts\")"
     ]
   }
 }
