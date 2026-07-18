@@ -4,20 +4,17 @@ import { hashPassword } from "better-auth/crypto";
 import { prisma } from "../src/db";
 import { UserRole } from "../src/generated/client/enums";
 
-async function main() {
-  const email = process.env.ADMIN_EMAIL;
-  const password = process.env.ADMIN_PASSWORD;
-  const name = process.env.ADMIN_NAME ?? "Admin";
-
-  if (!email || !password) {
-    throw new Error(
-      "Set ADMIN_EMAIL and ADMIN_PASSWORD before running the seed script.",
-    );
-  }
+async function createUserIfMissing(options: {
+  email: string;
+  password: string;
+  name: string;
+  role: UserRole;
+}) {
+  const { email, password, name, role } = options;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    console.log(`Admin user ${email} already exists, skipping.`);
+    console.log(`User ${email} already exists, skipping.`);
     return;
   }
 
@@ -29,7 +26,7 @@ async function main() {
       id: userId,
       email,
       name,
-      role: UserRole.admin,
+      role,
       emailVerified: true,
       accounts: {
         create: {
@@ -42,7 +39,42 @@ async function main() {
     },
   });
 
-  console.log(`Created admin user: ${email}`);
+  console.log(`Created ${role} user: ${email}`);
+}
+
+async function main() {
+  const email = process.env.ADMIN_EMAIL;
+  const password = process.env.ADMIN_PASSWORD;
+  const name = process.env.ADMIN_NAME ?? "Admin";
+
+  if (!email || !password) {
+    throw new Error(
+      "Set ADMIN_EMAIL and ADMIN_PASSWORD before running the seed script.",
+    );
+  }
+
+  await createUserIfMissing({ email, password, name, role: UserRole.admin });
+
+  // Optional second user with the `agent` role, used by E2E tests to cover
+  // role-based access control. Only provisioned when both env vars are set
+  // (e.g. in server/.env.test), so the plain `db:seed` script against
+  // dev/prod (which has no AGENT_EMAIL/AGENT_PASSWORD) is unaffected.
+  const agentEmail = process.env.AGENT_EMAIL;
+  const agentPassword = process.env.AGENT_PASSWORD;
+  const agentName = process.env.AGENT_NAME ?? "Agent";
+
+  if (agentEmail && agentPassword) {
+    await createUserIfMissing({
+      email: agentEmail,
+      password: agentPassword,
+      name: agentName,
+      role: UserRole.agent,
+    });
+  } else {
+    console.log(
+      "AGENT_EMAIL/AGENT_PASSWORD not set, skipping agent test user.",
+    );
+  }
 }
 
 main()
