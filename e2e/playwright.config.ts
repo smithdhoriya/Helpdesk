@@ -8,9 +8,10 @@ const clientDir = path.resolve(dirname, "../client");
 
 export default defineConfig({
   testDir: "./tests",
+  outputDir: path.join(dirname, "test-results"),
   globalSetup: "./global-setup.ts",
   fullyParallel: true,
-  reporter: "html",
+  reporter: [["html", { outputFolder: path.join(dirname, "playwright-report") }]],
   use: {
     baseURL: "http://localhost:5174",
     trace: "on-first-retry",

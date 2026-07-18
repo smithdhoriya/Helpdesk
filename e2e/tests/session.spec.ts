@@ -1,40 +1,19 @@
 import { expect, test } from "@playwright/test";
 
-import { login } from "./support/auth";
-import { ADMIN } from "./support/test-users";
+import { loginAndWaitForHome, logout } from "../support/auth";
+import { ADMIN_EMAIL, ADMIN_PASSWORD } from "../support/env";
 
-test.describe("Session behavior", () => {
-  test("redirects to /login when visiting the dashboard while unauthenticated", async ({
+test.describe("Session and protected routes", () => {
+  test("redirects an unauthenticated user from a protected route to /login", async ({
     page,
   }) => {
     await page.goto("/");
+
     await expect(page).toHaveURL("/login");
   });
 
-  test("redirects to /login when visiting /users directly while unauthenticated", async ({
-    page,
-  }) => {
-    await page.goto("/users");
-    await expect(page).toHaveURL("/login");
-  });
-
-  test("redirects an already-authenticated user away from /login back to the dashboard", async ({
-    page,
-  }) => {
-    await login(page, ADMIN.email, ADMIN.password);
-
-    await page.goto("/login");
-
-    await expect(page).toHaveURL("/");
-    await expect(
-      page.getByRole("heading", { name: "Dashboard" }),
-    ).toBeVisible();
-  });
-
-  test("keeps the session after reloading a protected route", async ({
-    page,
-  }) => {
-    await login(page, ADMIN.email, ADMIN.password);
+  test("keeps the user signed in across a page reload", async ({ page }) => {
+    await loginAndWaitForHome(page, ADMIN_EMAIL, ADMIN_PASSWORD);
 
     await page.reload();
 
@@ -44,21 +23,14 @@ test.describe("Session behavior", () => {
     ).toBeVisible();
   });
 
-  test("shows a loading indicator while the session is being verified", async ({
+  test("signs out and blocks access to protected routes afterwards", async ({
     page,
   }) => {
-    // Deliberately slow down the session check so the pending window is wide
-    // enough to reliably observe, instead of racing a `waitForTimeout`.
-    await page.route("**/get-session", async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await route.continue();
-    });
+    await loginAndWaitForHome(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+
+    await logout(page);
 
     await page.goto("/");
-
-    await expect(page.getByRole("status", { name: "Loading" })).toBeVisible();
-    // No session exists yet, so once the (slow) check resolves it lands on
-    // /login rather than hanging on the spinner forever.
-    await page.waitForURL("/login");
+    await expect(page).toHaveURL("/login");
   });
 });

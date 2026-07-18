@@ -58,7 +58,17 @@
       "Bash(node --experimental-vm-modules -e \"require.resolve\")",
       "Read(//c/Users/dhori/AppData/Local/**)",
       "Bash(NODE_PATH=\"/c/Users/dhori/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules\" node \"C:/Users/dhori/AppData/Local/Temp/claude/D--mydata-claude-code-Helpdesk/2e095438-45e5-4b2c-a158-70d432813767/scratchpad/smoke.mjs\")",
-      "Bash(node \"C:/Users/dhori/AppData/Local/Temp/claude/D--mydata-claude-code-Helpdesk/2e095438-45e5-4b2c-a158-70d432813767/scratchpad/smoke.mjs\")"
+      "Bash(node \"C:/Users/dhori/AppData/Local/Temp/claude/D--mydata-claude-code-Helpdesk/2e095438-45e5-4b2c-a158-70d432813767/scratchpad/smoke.mjs\")",
+      "Bash(rm -f e2e/tests/login.spec.ts e2e/tests/logout.spec.ts e2e/tests/rbac.spec.ts e2e/tests/session.spec.ts)",
+      "Bash(rm -f e2e/tests/support/auth.ts e2e/tests/support/config.ts e2e/tests/support/test-users.ts)",
+      "Bash(rmdir e2e/tests/support)",
+      "Bash(rm -f TEST_SUMMARY.md)",
+      "Bash(./node_modules/.bin/tsc --noEmit -p tsconfig.json)",
+      "Bash(./node_modules/.bin/playwright test *)",
+      "Bash(xargs grep -l \"INVALID_EMAIL_OR_PASSWORD\\\\|Invalid email or password\")",
+      "Bash(xargs grep -l \"BASE_ERROR_CODES\")",
+      "Bash(rm -rf e2e/test-results e2e/playwright-report)",
+      "Bash(./e2e/node_modules/.bin/playwright test *)"
     ]
   }
 }
