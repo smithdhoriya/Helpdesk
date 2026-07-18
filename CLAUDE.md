@@ -17,6 +17,7 @@ tickets, and suggest replies — reducing manual work for support agents.
 - Users have a `role` field (`UserRole` enum: `admin` / `agent`), defaulting to `agent`.
 - `requireAuth` middleware (`server/src/middleware/require-auth.ts`) validates the session server-side and attaches `req.user` / `req.session`; use it on any route that needs auth.
 - CORS is locked to `TRUSTED_ORIGIN` (server) / `http://localhost:5173` with `credentials: true`, since Better Auth relies on cookies.
+- Rate limiting on `/api/auth/*` (`rateLimit.enabled: process.env.NODE_ENV === "production"` in `auth.ts`) is explicitly tied to `NODE_ENV` so it's off in local dev but on in production — deployment must set `NODE_ENV=production` for it to take effect.
 - Client: `authClient` (`client/src/lib/auth-client.ts`, `better-auth/react`) points at the API `baseURL` and registers the `inferAdditionalFields` plugin (with an explicit `role` schema, since `client/` can't import the server's `auth` export across packages) so `session.user.role` is typed as `"admin" | "agent"`. `ProtectedRoute` (`client/src/components/ProtectedRoute.tsx`) gates routes on `authClient.useSession()`, redirecting to `/login` when there's no session. `AdminRoute` (`client/src/components/AdminRoute.tsx`) additionally redirects to `/` when `session.user.role !== "admin"` — nest routes under it for admin-only pages (e.g. `/users` in `client/src/App.tsx`). `NavBar` conditionally shows admin-only links based on `session.user.role`.
 - Required env vars are documented in `server/.env.example` (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `TRUSTED_ORIGIN`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`).
 
@@ -24,6 +25,7 @@ tickets, and suggest replies — reducing manual work for support agents.
 ```
 /client   # React frontend
 /server   # Express API
+/e2e      # Playwright E2E tests
 ```
 
 ## Development
@@ -34,6 +36,17 @@ cd client && bun run dev
 # Backend
 cd server && bun run dev
 ```
+
+## Testing
+- E2E tests (`/e2e`, Playwright) run the real client and server against an isolated
+  `helpdesk_test` Postgres database and isolated ports (server `4001`, client `5174`),
+  so `bun run dev` can keep running on `4000`/`5173` at the same time.
+- Config lives in `server/.env.test` / `client/.env.test` (copy
+  `server/.env.test.example` to `server/.env.test` and fill in real values first —
+  it's gitignored, same as `server/.env`).
+- `e2e/global-setup.ts` runs `prisma migrate deploy` + the seed script against
+  `helpdesk_test` automatically before each run (creates the database if missing).
+- Run with `cd e2e && bun run test` (or `bun run test:ui`).
 
 ## Deployment
 Both apps are containerized with Docker and deployed to a cloud provider

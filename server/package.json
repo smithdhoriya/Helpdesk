@@ -7,7 +7,10 @@
     "dev": "bun --watch src/index.ts",
     "start": "bun src/index.ts",
     "typecheck": "tsc --noEmit",
-    "db:seed": "bun prisma/seed.ts"
+    "db:seed": "bun prisma/seed.ts",
+    "dev:test": "bun --env-file=.env.test --watch src/index.ts",
+    "db:test:migrate": "bun --env-file=.env.test node_modules/prisma/build/index.js migrate deploy",
+    "db:test:seed": "bun --env-file=.env.test prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
