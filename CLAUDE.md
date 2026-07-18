@@ -37,17 +37,6 @@ cd client && bun run dev
 cd server && bun run dev
 ```
 
-## Testing
-- E2E tests (`/e2e`, Playwright) run the real client and server against an isolated
-  `helpdesk_test` Postgres database and isolated ports (server `4001`, client `5174`),
-  so `bun run dev` can keep running on `4000`/`5173` at the same time.
-- Config lives in `server/.env.test` / `client/.env.test` (copy
-  `server/.env.test.example` to `server/.env.test` and fill in real values first —
-  it's gitignored, same as `server/.env`).
-- `e2e/global-setup.ts` runs `prisma migrate deploy` + the seed script against
-  `helpdesk_test` automatically before each run (creates the database if missing).
-- Run with `cd e2e && bun run test` (or `bun run test:ui`).
-
 ## Deployment
 Both apps are containerized with Docker and deployed to a cloud provider
 (Railway, Fly.io, or AWS), with PostgreSQL migrations run via
@@ -55,6 +44,7 @@ Both apps are containerized with Docker and deployed to a cloud provider
 
 ## Key Conventions
 - Always use Context7 to fetch the latest official docs before writing code.
+- Use the `e2e-test-writer` subagent (`.claude/agents/e2e-test-writer.md`) for writing, updating, or debugging Playwright E2E tests in `/e2e` — it knows the project's test DB (`helpdesk_test`), isolated ports, and locator/test-design conventions. Don't hand-write E2E tests directly; delegate to it.
 - Follow `implementation-plan.md` and build one phase at a time.
 - Build UI with shadcn/ui components on top of Tailwind CSS; add new components via `bunx shadcn@latest add <component>` rather than hand-rolling primitives.
 - Write clean, modular code — no unnecessary abstractions.
