@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 
-import { apiFetch } from "@/lib/api"
+import { api } from "@/lib/api"
 import {
   Table,
   TableBody,
@@ -19,14 +19,14 @@ type User = {
 }
 
 function Users() {
-  const [users, setUsers] = useState<User[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    apiFetch("/api/users")
-      .then(setUsers)
-      .catch(() => setError("Failed to load users"))
-  }, [])
+  const {
+    data: users,
+    isPending,
+    isError,
+  } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => api.get<User[]>("/api/users").then((res) => res.data),
+  })
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
@@ -35,9 +35,11 @@ function Users() {
       </h1>
 
       <div className="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm">
-        {error && <p className="p-6 text-sm text-red-600">{error}</p>}
+        {isError && (
+          <p className="p-6 text-sm text-red-600">Failed to load users</p>
+        )}
 
-        {!error && !users && (
+        {isPending && (
           <p className="p-6 text-sm text-gray-600">Loading users...</p>
         )}
 

@@ -5,7 +5,7 @@ A ticket management system that uses AI to classify support emails, summarize
 tickets, and suggest replies — reducing manual work for support agents.
 
 ## Tech Stack
-- **Frontend**: React + TypeScript, Tailwind CSS, shadcn/ui, React Router
+- **Frontend**: React + TypeScript, Tailwind CSS, shadcn/ui, React Router, axios + TanStack Query for data fetching
 - **Backend**: Node.js + Express + TypeScript (Bun runtime)
 - **Database**: PostgreSQL + Prisma
 - **AI**: Claude API (Anthropic)
@@ -47,5 +47,6 @@ Both apps are containerized with Docker and deployed to a cloud provider
 - Use the `e2e-test-writer` subagent (`.claude/agents/e2e-test-writer.md`) for writing, updating, or debugging Playwright E2E tests in `/e2e` — it knows the project's test DB (`helpdesk_test`), isolated ports, and locator/test-design conventions. Don't hand-write E2E tests directly; delegate to it.
 - Follow `implementation-plan.md` and build one phase at a time.
 - Build UI with shadcn/ui components on top of Tailwind CSS; add new components via `bunx shadcn@latest add <component>` rather than hand-rolling primitives.
+- For calling the backend API, use the `api` axios instance (`client/src/lib/api.ts`) with TanStack Query (`useQuery`/`useMutation`) rather than raw `fetch`/`useEffect`. `QueryClientProvider` is already set up in `client/src/main.tsx`.
 - Write clean, modular code — no unnecessary abstractions.
 - Do not change the locked tech stack without explicit approval.
