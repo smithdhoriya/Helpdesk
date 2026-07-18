@@ -68,7 +68,13 @@
       "Bash(xargs grep -l \"INVALID_EMAIL_OR_PASSWORD\\\\|Invalid email or password\")",
       "Bash(xargs grep -l \"BASE_ERROR_CODES\")",
       "Bash(rm -rf e2e/test-results e2e/playwright-report)",
-      "Bash(./e2e/node_modules/.bin/playwright test *)"
+      "Bash(./e2e/node_modules/.bin/playwright test *)",
+      "Bash(./node_modules/.bin/tsc -b --noEmit)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(cd /tmp)",
+      "Bash(rm -f cookies.txt)",
+      "Bash(rm -f cookies_agent.txt)",
+      "Skill(claude-in-chrome)"
     ]
   }
 }
