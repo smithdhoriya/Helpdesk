@@ -16,14 +16,17 @@ function NavBar() {
 
   return (
     <nav className="sticky top-0 z-10 flex items-center justify-between bg-slate-900 px-6 py-4 shadow-md">
-      <div className="flex items-center gap-2.5">
+      <Link
+        to="/"
+        className="flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+      >
         <span className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-500 text-sm font-bold text-white">
           H
         </span>
         <span className="text-lg font-semibold tracking-tight text-white">
           Helpdesk
         </span>
-      </div>
+      </Link>
       <div className="flex items-center gap-4">
         {session?.user.role === "admin" && (
           <Link

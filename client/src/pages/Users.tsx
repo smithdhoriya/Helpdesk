@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type User = {
   id: string
@@ -39,11 +40,7 @@ function Users() {
           <p className="p-6 text-sm text-red-600">Failed to load users</p>
         )}
 
-        {isPending && (
-          <p className="p-6 text-sm text-gray-600">Loading users...</p>
-        )}
-
-        {users && (
+        {(isPending || users) && (
           <Table>
             <TableHeader>
               <TableRow>
@@ -54,7 +51,25 @@ function Users() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {isPending &&
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <Skeleton className="h-4 w-32" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-40" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-16" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+              {users?.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
