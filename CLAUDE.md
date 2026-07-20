@@ -10,6 +10,7 @@ tickets, and suggest replies — reducing manual work for support agents.
 - **Database**: PostgreSQL + Prisma
 - **AI**: Claude API (Anthropic)
 - **Authentication**: Better Auth, email/password with database-backed sessions (via Prisma)
+- **Testing**: Vitest + React Testing Library (component tests), Playwright (E2E)
 
 ## Authentication
 - Better Auth (`server/src/auth.ts`) with the Prisma adapter (`postgresql`), mounted at `/api/auth/*` via `toNodeHandler` — mounted before `express.json()` so Better Auth's own body parsing isn't interfered with.
@@ -42,9 +43,17 @@ Both apps are containerized with Docker and deployed to a cloud provider
 (Railway, Fly.io, or AWS), with PostgreSQL migrations run via
 `prisma migrate deploy`.
 
+## Testing
+- **E2E**: Playwright tests in `/e2e`. Use the `e2e-test-writer` subagent (`.claude/agents/e2e-test-writer.md`) for writing, updating, or debugging these — it knows the project's test DB (`helpdesk_test`), isolated ports, and locator/test-design conventions. Don't hand-write E2E tests directly; delegate to it.
+- **Component tests**: Vitest + React Testing Library, colocated with the component/page as `<Name>.test.tsx` (e.g. `client/src/pages/Users.test.tsx`). Write these directly — no subagent.
+  - Config lives in `client/vitest.config.ts` (jsdom environment, `@` alias matching Vite's) with a setup file at `client/src/test/setup.ts` (registers `@testing-library/jest-dom` matchers and calls RTL's `cleanup()` after each test).
+  - Use `renderWithQuery` (`client/src/test/render.tsx`) to render any component that uses `useQuery`/`useMutation` — it wraps the component in its own `QueryClientProvider` (with `retry: false`, so failed-request tests don't retry/hang) rather than relying on the app's real `QueryClientProvider` from `main.tsx`.
+  - Mock the `api` axios instance with `vi.mock("@/lib/api", () => ({ api: { get: vi.fn() } }))` instead of hitting the network, then assert on the actual states the component renders (loading skeletons, populated rows, error text) — not implementation details.
+  - Compute locale-sensitive assertions (e.g. `toLocaleDateString()`) the same way the component does rather than hardcoding a formatted string, so tests don't depend on the machine's locale.
+  - Commands (run from `client/`): `bun run test` (single run, CI), `bun run test:watch` (watch mode while writing tests), `bun run test:ui` (Vitest's browser UI for interactive debugging).
+
 ## Key Conventions
 - Always use Context7 to fetch the latest official docs before writing code.
-- Use the `e2e-test-writer` subagent (`.claude/agents/e2e-test-writer.md`) for writing, updating, or debugging Playwright E2E tests in `/e2e` — it knows the project's test DB (`helpdesk_test`), isolated ports, and locator/test-design conventions. Don't hand-write E2E tests directly; delegate to it.
 - Follow `implementation-plan.md` and build one phase at a time.
 - Build UI with shadcn/ui components on top of Tailwind CSS; add new components via `bunx shadcn@latest add <component>` rather than hand-rolling primitives.
 - For calling the backend API, use the `api` axios instance (`client/src/lib/api.ts`) with TanStack Query (`useQuery`/`useMutation`) rather than raw `fetch`/`useEffect`. `QueryClientProvider` is already set up in `client/src/main.tsx`.

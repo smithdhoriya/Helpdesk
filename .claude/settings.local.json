@@ -74,7 +74,8 @@
       "Bash(cd /tmp)",
       "Bash(rm -f cookies.txt)",
       "Bash(rm -f cookies_agent.txt)",
-      "Skill(claude-in-chrome)"
+      "Skill(claude-in-chrome)",
+      "Bash(bun *)"
     ]
   }
 }
