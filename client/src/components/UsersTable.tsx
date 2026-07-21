@@ -1,3 +1,7 @@
+import { PencilIcon } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { DialogTrigger } from "@/components/ui/dialog"
 import {
   Table,
   TableBody,
@@ -13,9 +17,10 @@ interface UsersTableProps {
   users: User[] | undefined
   isPending: boolean
   isError: boolean
+  onEdit: (user: User) => void
 }
 
-function UsersTable({ users, isPending, isError }: UsersTableProps) {
+function UsersTable({ users, isPending, isError, onEdit }: UsersTableProps) {
   return (
     <div className="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm">
       {isError && (
@@ -30,6 +35,9 @@ function UsersTable({ users, isPending, isError }: UsersTableProps) {
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Joined</TableHead>
+              <TableHead>
+                <span className="sr-only">Actions</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -48,6 +56,9 @@ function UsersTable({ users, isPending, isError }: UsersTableProps) {
                   <TableCell>
                     <Skeleton className="h-4 w-24" />
                   </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-8" />
+                  </TableCell>
                 </TableRow>
               ))}
 
@@ -58,6 +69,15 @@ function UsersTable({ users, isPending, isError }: UsersTableProps) {
                 <TableCell className="capitalize">{user.role}</TableCell>
                 <TableCell>
                   {new Date(user.createdAt).toLocaleDateString()}
+                </TableCell>
+                <TableCell>
+                  <DialogTrigger
+                    onClick={() => onEdit(user)}
+                    render={<Button variant="ghost" size="icon-sm" />}
+                  >
+                    <PencilIcon />
+                    <span className="sr-only">Edit {user.name}</span>
+                  </DialogTrigger>
                 </TableCell>
               </TableRow>
             ))}

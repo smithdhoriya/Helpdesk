@@ -7,10 +7,11 @@ import { renderWithQuery } from "@/test/render"
 import Users from "./Users"
 
 vi.mock("@/lib/api", () => ({
-  api: { get: vi.fn() },
+  api: { get: vi.fn(), patch: vi.fn() },
 }))
 
 const mockGet = vi.mocked(api.get)
+const mockPatch = vi.mocked(api.patch)
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -51,7 +52,7 @@ describe("Users page", () => {
 
     expect(screen.getByText("Users")).toBeInTheDocument()
     expect(screen.getByRole("columnheader", { name: "Name" })).toBeInTheDocument()
-    expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(20)
+    expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(25)
   })
 
   it("renders the user list once the request resolves", async () => {
@@ -91,10 +92,11 @@ describe("Users page", () => {
   })
 })
 
-describe("Create User dialog", () => {
+describe("User dialog", () => {
   beforeEach(() => {
     mockGet.mockReset()
     mockGet.mockResolvedValue({ data: users })
+    mockPatch.mockReset()
   })
 
   it("shows the dialog when the Create User button is clicked", async () => {
@@ -104,6 +106,7 @@ describe("Create User dialog", () => {
     await user.click(screen.getByRole("button", { name: "Create User" }))
 
     expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Create User" })).toBeInTheDocument()
   })
 
   it("hides the dialog when clicking outside of it", async () => {
@@ -134,5 +137,63 @@ describe("Create User dialog", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
+  })
+
+  it("opens pre-filled when a row's edit button is clicked", async () => {
+    const user = userEvent.setup()
+    renderWithQuery(<Users />)
+
+    await screen.findByText("Ada Lovelace")
+    await user.click(screen.getByRole("button", { name: "Edit Ada Lovelace" }))
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Edit User" })).toBeInTheDocument()
+    expect(screen.getByLabelText("Name")).toHaveValue("Ada Lovelace")
+    expect(screen.getByLabelText("Email")).toHaveValue("ada@example.com")
+  })
+
+  it("saves an edit, closes the dialog, and calls the API with the right payload", async () => {
+    const user = userEvent.setup()
+    mockPatch.mockResolvedValue({ data: { ...users[0], name: "Ada K. Lovelace" } })
+
+    renderWithQuery(<Users />)
+
+    await screen.findByText("Ada Lovelace")
+    await user.click(screen.getByRole("button", { name: "Edit Ada Lovelace" }))
+
+    const nameInput = screen.getByLabelText("Name")
+    await user.clear(nameInput)
+    await user.type(nameInput, "Ada K. Lovelace")
+    await user.click(screen.getByRole("button", { name: "Save Changes" }))
+
+    await waitFor(() => {
+      expect(mockPatch).toHaveBeenCalledWith("/api/users/1", {
+        name: "Ada K. Lovelace",
+        email: "ada@example.com",
+        password: "",
+      })
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+  })
+
+  it("only ever renders a single dialog instance, reused for create and edit", async () => {
+    const user = userEvent.setup()
+    renderWithQuery(<Users />)
+
+    await screen.findByText("Ada Lovelace")
+
+    await user.click(screen.getByRole("button", { name: "Create User" }))
+    expect(screen.getAllByRole("dialog")).toHaveLength(1)
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole("button", { name: "Edit Ada Lovelace" }))
+    expect(screen.getAllByRole("dialog")).toHaveLength(1)
+    expect(screen.getByRole("heading", { name: "Edit User" })).toBeInTheDocument()
   })
 })

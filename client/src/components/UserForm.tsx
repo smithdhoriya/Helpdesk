@@ -7,9 +7,15 @@ import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
 import { DialogFooter } from "@/components/ui/dialog"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { createUser, usersQueryKey } from "@/lib/users"
+import { createUser, updateUser, usersQueryKey, type User } from "@/lib/users"
 
 const createUserSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -17,31 +23,54 @@ const createUserSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 })
 
-type CreateUserForm = z.infer<typeof createUserSchema>
+const editUserSchema = z.object({
+  name: z.string().min(3, "Name must be at least 3 characters"),
+  email: z.string().min(1, "Email is required").email("Invalid email"),
+  password: z.union([
+    z.literal(""),
+    z.string().min(8, "Password must be at least 8 characters"),
+  ]),
+})
+
+type UserFormValues = z.infer<typeof createUserSchema>
 
 interface UserFormProps {
+  user?: User
   onSuccess: () => void
 }
 
-function UserForm({ onSuccess }: UserFormProps) {
+function UserForm({ user, onSuccess }: UserFormProps) {
   const [error, setError] = useState<string | null>(null)
   const queryClient = useQueryClient()
+  const isEditing = Boolean(user)
 
   const {
     control,
     handleSubmit,
     reset,
     formState: { isSubmitting },
-  } = useForm<CreateUserForm>({ resolver: zodResolver(createUserSchema) })
+  } = useForm<UserFormValues>({
+    resolver: zodResolver(isEditing ? editUserSchema : createUserSchema),
+    defaultValues: user
+      ? { name: user.name, email: user.email, password: "" }
+      : undefined,
+  })
 
   const mutation = useMutation({
-    mutationFn: createUser,
+    mutationFn: (data: UserFormValues) =>
+      user
+        ? updateUser(user.id, {
+            name: data.name,
+            email: data.email,
+            password: data.password,
+          })
+        : createUser(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: usersQueryKey })
     },
   })
 
-  async function onSubmit(data: CreateUserForm) {
+  async function onSubmit(data: UserFormValues) {
     setError(null)
 
     try {
@@ -107,6 +136,11 @@ function UserForm({ onSuccess }: UserFormProps) {
                 aria-invalid={fieldState.invalid}
                 autoComplete="new-password"
               />
+              {isEditing && !fieldState.invalid && (
+                <FieldDescription>
+                  Leave blank to keep the current password.
+                </FieldDescription>
+              )}
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
@@ -116,7 +150,13 @@ function UserForm({ onSuccess }: UserFormProps) {
 
         <DialogFooter>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Creating..." : "Create User"}
+            {isEditing
+              ? isSubmitting
+                ? "Saving..."
+                : "Save Changes"
+              : isSubmitting
+                ? "Creating..."
+                : "Create User"}
           </Button>
         </DialogFooter>
       </FieldGroup>

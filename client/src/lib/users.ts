@@ -14,6 +14,12 @@ export type CreateUserInput = {
   password: string
 }
 
+export type UpdateUserInput = {
+  name: string
+  email: string
+  password?: string
+}
+
 export const usersQueryKey = ["users"] as const
 
 export function fetchUsers() {
@@ -22,4 +28,8 @@ export function fetchUsers() {
 
 export function createUser(data: CreateUserInput) {
   return api.post<User>("/api/users", data).then((res) => res.data)
+}
+
+export function updateUser(id: string, data: UpdateUserInput) {
+  return api.patch<User>(`/api/users/${id}`, data).then((res) => res.data)
 }

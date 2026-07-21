@@ -7,10 +7,19 @@ import { renderWithQuery } from "@/test/render"
 import UserForm from "./UserForm"
 
 vi.mock("@/lib/api", () => ({
-  api: { post: vi.fn() },
+  api: { post: vi.fn(), patch: vi.fn() },
 }))
 
 const mockPost = vi.mocked(api.post)
+const mockPatch = vi.mocked(api.patch)
+
+const existingUser = {
+  id: "1",
+  name: "Ada Lovelace",
+  email: "ada@example.com",
+  role: "agent" as const,
+  createdAt: "2024-01-01T00:00:00.000Z",
+}
 
 async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Name"), "Ada Lovelace")
@@ -21,6 +30,7 @@ async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
 describe("UserForm", () => {
   beforeEach(() => {
     mockPost.mockReset()
+    mockPatch.mockReset()
   })
 
   it("renders the Name, Email, and Password fields", () => {
@@ -151,5 +161,101 @@ describe("UserForm", () => {
     await user.click(screen.getByRole("button", { name: "Create User" }))
 
     expect(await screen.findByText("Failed to create user")).toBeInTheDocument()
+  })
+})
+
+describe("UserForm editing an existing user", () => {
+  beforeEach(() => {
+    mockPost.mockReset()
+    mockPatch.mockReset()
+  })
+
+  it("renders pre-filled with the user's data and a Save Changes button", () => {
+    renderWithQuery(<UserForm user={existingUser} onSuccess={vi.fn()} />)
+
+    expect(screen.getByLabelText("Name")).toHaveValue("Ada Lovelace")
+    expect(screen.getByLabelText("Email")).toHaveValue("ada@example.com")
+    expect(screen.getByLabelText("Password")).toHaveValue("")
+    expect(
+      screen.getByText("Leave blank to keep the current password.")
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Save Changes" })
+    ).toBeInTheDocument()
+  })
+
+  it("submits an update without a password when the field is left blank", async () => {
+    const user = userEvent.setup()
+    const onSuccess = vi.fn()
+    mockPatch.mockResolvedValue({ data: { ...existingUser, name: "Ada K. Lovelace" } })
+
+    renderWithQuery(<UserForm user={existingUser} onSuccess={onSuccess} />)
+
+    const nameInput = screen.getByLabelText("Name")
+    await user.clear(nameInput)
+    await user.type(nameInput, "Ada K. Lovelace")
+    await user.click(screen.getByRole("button", { name: "Save Changes" }))
+
+    await waitFor(() => {
+      expect(mockPatch).toHaveBeenCalledWith("/api/users/1", {
+        name: "Ada K. Lovelace",
+        email: "ada@example.com",
+        password: "",
+      })
+    })
+    expect(mockPost).not.toHaveBeenCalled()
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalled()
+    })
+  })
+
+  it("submits an update with a new password when one is provided", async () => {
+    const user = userEvent.setup()
+    mockPatch.mockResolvedValue({ data: existingUser })
+
+    renderWithQuery(<UserForm user={existingUser} onSuccess={vi.fn()} />)
+
+    await user.type(screen.getByLabelText("Password"), "newpassword123")
+    await user.click(screen.getByRole("button", { name: "Save Changes" }))
+
+    await waitFor(() => {
+      expect(mockPatch).toHaveBeenCalledWith("/api/users/1", {
+        name: "Ada Lovelace",
+        email: "ada@example.com",
+        password: "newpassword123",
+      })
+    })
+  })
+
+  it("blocks submission and shows an error for a too-short password", async () => {
+    const user = userEvent.setup()
+    renderWithQuery(<UserForm user={existingUser} onSuccess={vi.fn()} />)
+
+    await user.type(screen.getByLabelText("Password"), "short")
+    await user.click(screen.getByRole("button", { name: "Save Changes" }))
+
+    expect(
+      await screen.findByText("Password must be at least 8 characters")
+    ).toBeInTheDocument()
+    expect(mockPatch).not.toHaveBeenCalled()
+  })
+
+  it("shows a server error inline without calling onSuccess on failure", async () => {
+    const user = userEvent.setup()
+    const onSuccess = vi.fn()
+    mockPatch.mockRejectedValue({
+      isAxiosError: true,
+      response: { data: { error: "A user with this email already exists" } },
+    })
+
+    renderWithQuery(<UserForm user={existingUser} onSuccess={onSuccess} />)
+
+    await user.click(screen.getByRole("button", { name: "Save Changes" }))
+
+    expect(
+      await screen.findByText("A user with this email already exists")
+    ).toBeInTheDocument()
+    expect(onSuccess).not.toHaveBeenCalled()
   })
 })
