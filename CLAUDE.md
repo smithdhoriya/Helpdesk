@@ -11,6 +11,7 @@ tickets, and suggest replies — reducing manual work for support agents.
 - **AI**: Claude API (Anthropic)
 - **Authentication**: Better Auth, email/password with database-backed sessions (via Prisma)
 - **Testing**: Vitest + React Testing Library (component tests), Playwright (E2E)
+- **Validation**: Zod, on both client and server (see Key Conventions)
 
 ## Authentication
 - Better Auth (`server/src/auth.ts`) with the Prisma adapter (`postgresql`), mounted at `/api/auth/*` via `toNodeHandler` — mounted before `express.json()` so Better Auth's own body parsing isn't interfered with.
@@ -57,5 +58,9 @@ Both apps are containerized with Docker and deployed to a cloud provider
 - Follow `implementation-plan.md` and build one phase at a time.
 - Build UI with shadcn/ui components on top of Tailwind CSS; add new components via `bunx shadcn@latest add <component>` rather than hand-rolling primitives.
 - For calling the backend API, use the `api` axios instance (`client/src/lib/api.ts`) with TanStack Query (`useQuery`/`useMutation`) rather than raw `fetch`/`useEffect`. `QueryClientProvider` is already set up in `client/src/main.tsx`.
+- Use Zod for all data validation, client and server — don't hand-roll `typeof`/regex checks:
+  - **Client forms**: define the schema with `z.object({...})`, wire it up via `useForm({ resolver: zodResolver(schema) })` (`@hookform/resolvers/zod`), and add `noValidate` to the `<form>` so the browser's native HTML5 constraint validation (e.g. `type="email"`) can't silently swallow the submit event before Zod/React Hook Form ever sees it — see `client/src/components/CreateUserDialog.tsx`.
+  - **Server routes**: define the same kind of schema in the route file and validate the request body with `schema.safeParse(req.body)`, returning `400 { error: parsed.error.issues[0].message }` on failure — see `server/src/routes/users.ts`. `zod` is a direct dependency of both `client/package.json` and `server/package.json` (not just a transitive one via `better-auth`).
+- Server-side, compare/assign user roles via the generated `UserRole` enum (`server/src/generated/client/enums.ts`, e.g. `UserRole.admin` / `UserRole.agent`) — never a bare `"admin"`/`"agent"` string literal (see `server/src/middleware/require-admin.ts`, `server/src/routes/users.ts`, `server/src/auth.ts`, `server/prisma/seed.ts`). Client-side there's no equivalent enum to import (it can't reach across to the server package, same reason `auth-client.ts` redeclares the `role` field schema) — the `"admin" | "agent"` union type is the client's source of truth for role literals.
 - Write clean, modular code — no unnecessary abstractions.
 - Do not change the locked tech stack without explicit approval.
