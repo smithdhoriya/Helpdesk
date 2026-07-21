@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { screen, within } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import { api } from "@/lib/api"
 import { renderWithQuery } from "@/test/render"
@@ -87,5 +88,51 @@ describe("Users page", () => {
 
     expect(await screen.findByText("Failed to load users")).toBeInTheDocument()
     expect(screen.queryByRole("table")).not.toBeInTheDocument()
+  })
+})
+
+describe("Create User dialog", () => {
+  beforeEach(() => {
+    mockGet.mockReset()
+    mockGet.mockResolvedValue({ data: users })
+  })
+
+  it("shows the dialog when the Create User button is clicked", async () => {
+    const user = userEvent.setup()
+    renderWithQuery(<Users />)
+
+    await user.click(screen.getByRole("button", { name: "Create User" }))
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+  })
+
+  it("hides the dialog when clicking outside of it", async () => {
+    const user = userEvent.setup()
+    renderWithQuery(<Users />)
+
+    await user.click(screen.getByRole("button", { name: "Create User" }))
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+
+    const overlay = document.querySelector('[data-slot="dialog-overlay"]')
+    expect(overlay).not.toBeNull()
+    await user.click(overlay as Element)
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+  })
+
+  it("hides the dialog when the Escape key is pressed", async () => {
+    const user = userEvent.setup()
+    renderWithQuery(<Users />)
+
+    await user.click(screen.getByRole("button", { name: "Create User" }))
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
   })
 })

@@ -75,7 +75,13 @@
       "Bash(rm -f cookies.txt)",
       "Bash(rm -f cookies_agent.txt)",
       "Skill(claude-in-chrome)",
-      "Bash(bun *)"
+      "Bash(bun *)",
+      "Bash(bunx vitest *)",
+      "Bash(grep -o \"\\\\\\\\.border-input[^}]*}\")",
+      "Bash(node \"C:/Users/dhori/AppData/Local/Temp/claude/D--mydata-claude-code-Helpdesk/a553fe8d-3c97-43a1-9332-5181918bd3d8/scratchpad/check-border.mjs\")",
+      "Bash(node __check-border.mjs)",
+      "Bash(node *)",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }
