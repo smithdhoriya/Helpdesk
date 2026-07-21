@@ -1,10 +1,17 @@
 import { api } from "@/lib/api"
 
+export const UserRole = {
+  admin: "admin",
+  agent: "agent",
+} as const
+
+export type UserRole = (typeof UserRole)[keyof typeof UserRole]
+
 export type User = {
   id: string
   name: string
   email: string
-  role: "admin" | "agent"
+  role: UserRole
   createdAt: string
 }
 
@@ -32,4 +39,8 @@ export function createUser(data: CreateUserInput) {
 
 export function updateUser(id: string, data: UpdateUserInput) {
   return api.patch<User>(`/api/users/${id}`, data).then((res) => res.data)
+}
+
+export function deleteUser(id: string) {
+  return api.delete(`/api/users/${id}`)
 }

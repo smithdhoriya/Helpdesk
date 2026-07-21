@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event"
 
 import { api } from "@/lib/api"
 import { renderWithQuery } from "@/test/render"
+import { UserRole } from "@/lib/users"
 import UserForm from "./UserForm"
 
 vi.mock("@/lib/api", () => ({
@@ -17,7 +18,7 @@ const existingUser = {
   id: "1",
   name: "Ada Lovelace",
   email: "ada@example.com",
-  role: "agent" as const,
+  role: UserRole.agent,
   createdAt: "2024-01-01T00:00:00.000Z",
 }
 
@@ -73,7 +74,7 @@ describe("UserForm", () => {
         id: "3",
         name: "Ada Lovelace",
         email: "ada@example.com",
-        role: "agent",
+        role: UserRole.agent,
         createdAt: "2024-01-01T00:00:00.000Z",
       },
     })
@@ -120,7 +121,7 @@ describe("UserForm", () => {
         id: "3",
         name: "Ada Lovelace",
         email: "ada@example.com",
-        role: "agent",
+        role: UserRole.agent,
         createdAt: "2024-01-01T00:00:00.000Z",
       },
     })

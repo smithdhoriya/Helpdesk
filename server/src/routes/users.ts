@@ -29,6 +29,7 @@ const updateUserSchema = z.object({
 
 usersRouter.get("/", async (_req, res) => {
   const users = await prisma.user.findMany({
+    where: { deletedAt: null },
     select: { id: true, name: true, email: true, role: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
@@ -121,4 +122,26 @@ usersRouter.patch("/:id", async (req, res) => {
   ]);
 
   res.json(user);
+});
+
+usersRouter.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+
+  const user = await prisma.user.findUnique({ where: { id, deletedAt: null } });
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  if (user.role === UserRole.admin) {
+    res.status(403).json({ error: "Admin users cannot be deleted" });
+    return;
+  }
+
+  await prisma.$transaction([
+    prisma.user.update({ where: { id }, data: { deletedAt: new Date() } }),
+    prisma.session.deleteMany({ where: { userId: id } }),
+  ]);
+
+  res.status(204).send();
 });

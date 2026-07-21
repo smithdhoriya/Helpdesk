@@ -4,14 +4,16 @@ import userEvent from "@testing-library/user-event"
 
 import { api } from "@/lib/api"
 import { renderWithQuery } from "@/test/render"
+import { UserRole } from "@/lib/users"
 import Users from "./Users"
 
 vi.mock("@/lib/api", () => ({
-  api: { get: vi.fn(), patch: vi.fn() },
+  api: { get: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }))
 
 const mockGet = vi.mocked(api.get)
 const mockPatch = vi.mocked(api.patch)
+const mockDelete = vi.mocked(api.delete)
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -28,14 +30,14 @@ const users = [
     id: "1",
     name: "Ada Lovelace",
     email: "ada@example.com",
-    role: "admin" as const,
+    role: UserRole.admin,
     createdAt: "2024-01-15T00:00:00.000Z",
   },
   {
     id: "2",
     name: "Grace Hopper",
     email: "grace@example.com",
-    role: "agent" as const,
+    role: UserRole.agent,
     createdAt: "2024-03-02T00:00:00.000Z",
   },
 ]
@@ -68,14 +70,14 @@ describe("Users page", () => {
 
     const adaRow = within(rows[1])
     expect(adaRow.getByText("ada@example.com")).toBeInTheDocument()
-    expect(adaRow.getByText("admin")).toBeInTheDocument()
+    expect(adaRow.getByText(UserRole.admin)).toBeInTheDocument()
     expect(
       adaRow.getByText(new Date(users[0].createdAt).toLocaleDateString())
     ).toBeInTheDocument()
 
     const graceRow = within(rows[2])
     expect(graceRow.getByText("Grace Hopper")).toBeInTheDocument()
-    expect(graceRow.getByText("agent")).toBeInTheDocument()
+    expect(graceRow.getByText(UserRole.agent)).toBeInTheDocument()
 
     expect(
       screen.queryByText("Failed to load users")
@@ -195,5 +197,77 @@ describe("User dialog", () => {
     await user.click(screen.getByRole("button", { name: "Edit Ada Lovelace" }))
     expect(screen.getAllByRole("dialog")).toHaveLength(1)
     expect(screen.getByRole("heading", { name: "Edit User" })).toBeInTheDocument()
+  })
+})
+
+describe("Delete User dialog", () => {
+  beforeEach(() => {
+    mockGet.mockReset()
+    mockGet.mockResolvedValue({ data: users })
+    mockDelete.mockReset()
+  })
+
+  it("disables the delete button for an admin row", async () => {
+    renderWithQuery(<Users />)
+
+    await screen.findByText("Ada Lovelace")
+
+    expect(screen.getByRole("button", { name: "Delete Ada Lovelace" })).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "Delete Grace Hopper" })
+    ).not.toBeDisabled()
+  })
+
+  it("opens a confirmation dialog when a row's delete button is clicked", async () => {
+    const user = userEvent.setup()
+    renderWithQuery(<Users />)
+
+    await screen.findByText("Ada Lovelace")
+    await user.click(screen.getByRole("button", { name: "Delete Grace Hopper" }))
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(
+      screen.getByText("Delete Grace Hopper? This can't be undone.")
+    ).toBeInTheDocument()
+    expect(mockDelete).not.toHaveBeenCalled()
+  })
+
+  it("leaves the user in the table when Cancel is clicked", async () => {
+    const user = userEvent.setup()
+    renderWithQuery(<Users />)
+
+    await screen.findByText("Ada Lovelace")
+    await user.click(screen.getByRole("button", { name: "Delete Grace Hopper" }))
+    await user.click(screen.getByRole("button", { name: "Cancel" }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+    expect(mockDelete).not.toHaveBeenCalled()
+    expect(screen.getByText("Grace Hopper")).toBeInTheDocument()
+  })
+
+  it("removes the user from the table after confirming deletion", async () => {
+    const user = userEvent.setup()
+    mockGet
+      .mockResolvedValueOnce({ data: users })
+      .mockResolvedValueOnce({ data: [users[0]] })
+    mockDelete.mockResolvedValue({})
+    renderWithQuery(<Users />)
+
+    await screen.findByText("Ada Lovelace")
+    await user.click(screen.getByRole("button", { name: "Delete Grace Hopper" }))
+    await user.click(screen.getByRole("button", { name: "Delete" }))
+
+    await waitFor(() => {
+      expect(mockDelete).toHaveBeenCalledWith("/api/users/2")
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+    await waitFor(() => {
+      expect(screen.queryByText("Grace Hopper")).not.toBeInTheDocument()
+    })
   })
 })

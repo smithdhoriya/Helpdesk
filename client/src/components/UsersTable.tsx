@@ -1,4 +1,4 @@
-import { PencilIcon } from "lucide-react"
+import { PencilIcon, Trash2Icon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { DialogTrigger } from "@/components/ui/dialog"
@@ -11,16 +11,23 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { User } from "@/lib/users"
+import { UserRole, type User } from "@/lib/users"
 
 interface UsersTableProps {
   users: User[] | undefined
   isPending: boolean
   isError: boolean
   onEdit: (user: User) => void
+  onDelete: (user: User) => void
 }
 
-function UsersTable({ users, isPending, isError, onEdit }: UsersTableProps) {
+function UsersTable({
+  users,
+  isPending,
+  isError,
+  onEdit,
+  onDelete,
+}: UsersTableProps) {
   return (
     <div className="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm">
       {isError && (
@@ -70,7 +77,7 @@ function UsersTable({ users, isPending, isError, onEdit }: UsersTableProps) {
                 <TableCell>
                   {new Date(user.createdAt).toLocaleDateString()}
                 </TableCell>
-                <TableCell>
+                <TableCell className="flex gap-1">
                   <DialogTrigger
                     onClick={() => onEdit(user)}
                     render={<Button variant="ghost" size="icon-sm" />}
@@ -78,6 +85,15 @@ function UsersTable({ users, isPending, isError, onEdit }: UsersTableProps) {
                     <PencilIcon />
                     <span className="sr-only">Edit {user.name}</span>
                   </DialogTrigger>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={user.role === UserRole.admin}
+                    onClick={() => onDelete(user)}
+                  >
+                    <Trash2Icon />
+                    <span className="sr-only">Delete {user.name}</span>
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}

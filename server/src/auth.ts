@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 
 import { prisma } from "./db";
@@ -20,5 +21,20 @@ export const auth = betterAuth({
         input: false,
       },
     },
+  },
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/sign-in/email") return;
+
+      const user = await prisma.user.findUnique({
+        where: { email: ctx.body.email },
+      });
+
+      if (user?.deletedAt) {
+        throw new APIError("FORBIDDEN", {
+          message: "This account has been deactivated.",
+        });
+      }
+    }),
   },
 });

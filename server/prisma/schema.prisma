@@ -19,6 +19,7 @@ model User {
   emailVerified Boolean   @default(false)
   image         String?
   role          UserRole  @default(agent)
+  deletedAt     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
