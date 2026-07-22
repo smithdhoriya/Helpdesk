@@ -1,16 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { Router, type Response } from "express";
+import { Router } from "express";
 import { hashPassword } from "better-auth/crypto";
 import { z } from "zod";
 
 import { prisma } from "../db";
 import { UserRole } from "../generated/client/enums";
+import { sendValidationError } from "../lib/validation";
 
 export const usersRouter = Router();
-
-function sendValidationError(res: Response, error: z.ZodError) {
-  res.status(400).json({ error: error.issues[0].message });
-}
 
 const createUserSchema = z.object({
   name: z.string().trim().min(3, "Name must be at least 3 characters"),

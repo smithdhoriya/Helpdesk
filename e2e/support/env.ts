@@ -44,3 +44,6 @@ export const ADMIN_EMAIL = required("ADMIN_EMAIL");
 export const ADMIN_PASSWORD = required("ADMIN_PASSWORD");
 export const AGENT_EMAIL = required("AGENT_EMAIL");
 export const AGENT_PASSWORD = required("AGENT_PASSWORD");
+export const INBOUND_EMAIL_WEBHOOK_SECRET = required(
+  "INBOUND_EMAIL_WEBHOOK_SECRET",
+);

@@ -29,6 +29,12 @@ function NavBar() {
         </span>
       </Link>
       <div className="flex items-center gap-4">
+        <Link
+          to="/tickets"
+          className="text-sm font-medium text-slate-300 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+        >
+          Tickets
+        </Link>
         {session?.user.role === UserRole.admin && (
           <Link
             to="/users"

@@ -82,7 +82,8 @@
       "Bash(node __check-border.mjs)",
       "Bash(node *)",
       "Bash(echo \"exit: $?\")",
-      "Bash(bunx playwright *)"
+      "Bash(bunx playwright *)",
+      "Bash(psql \"postgresql://postgres:Postgres%402026@localhost:5432/helpdesk\" -c \"SELECT count\\(*\\) FROM ticket;\")"
     ]
   }
 }
