@@ -40,6 +40,7 @@ function required(key: string): string {
   return value;
 }
 
+export const PORT = required("PORT");
 export const ADMIN_EMAIL = required("ADMIN_EMAIL");
 export const ADMIN_PASSWORD = required("ADMIN_PASSWORD");
 export const AGENT_EMAIL = required("AGENT_EMAIL");
