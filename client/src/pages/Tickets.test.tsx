@@ -233,4 +233,75 @@ describe("Tickets page", () => {
     rows = screen.getAllByRole("row")
     expect(rows).toHaveLength(3)
   })
+
+  it("requests a status filter when a status is selected", async () => {
+    mockGet.mockResolvedValue({ data: tickets })
+
+    renderTickets()
+    await screen.findByText("Can't log in")
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Filter by status" }))
+    await userEvent.click(await screen.findByRole("option", { name: "Resolved" }))
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenLastCalledWith("/api/tickets", {
+        params: { sortBy: "createdAt", sortOrder: "desc", status: "resolved" },
+      })
+    })
+  })
+
+  it("requests a category filter, including the uncategorized option", async () => {
+    mockGet.mockResolvedValue({ data: tickets })
+
+    renderTickets()
+    await screen.findByText("Can't log in")
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Filter by category" }))
+    await userEvent.click(await screen.findByRole("option", { name: "Uncategorized" }))
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenLastCalledWith("/api/tickets", {
+        params: { sortBy: "createdAt", sortOrder: "desc", category: "uncategorized" },
+      })
+    })
+  })
+
+  it("clears a filter by re-selecting the 'all' option", async () => {
+    mockGet.mockResolvedValue({ data: tickets })
+
+    renderTickets()
+    await screen.findByText("Can't log in")
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Filter by status" }))
+    await userEvent.click(await screen.findByRole("option", { name: "Resolved" }))
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenLastCalledWith("/api/tickets", {
+        params: { sortBy: "createdAt", sortOrder: "desc", status: "resolved" },
+      })
+    })
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Filter by status" }))
+    await userEvent.click(await screen.findByRole("option", { name: "All statuses" }))
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenLastCalledWith("/api/tickets", {
+        params: { sortBy: "createdAt", sortOrder: "desc" },
+      })
+    })
+  })
+
+  it("debounces search input and requests a search filter", async () => {
+    mockGet.mockResolvedValue({ data: tickets })
+
+    renderTickets()
+    await screen.findByText("Can't log in")
+
+    await userEvent.type(screen.getByLabelText("Search tickets"), "refund")
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenLastCalledWith("/api/tickets", {
+        params: { sortBy: "createdAt", sortOrder: "desc", search: "refund" },
+      })
+    })
+  })
 })

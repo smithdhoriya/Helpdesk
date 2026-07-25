@@ -55,12 +55,20 @@ export interface TicketsSort {
   sortOrder: "asc" | "desc"
 }
 
-export const ticketsQueryKey = (sort: TicketsSort) => ["tickets", sort] as const
+export interface TicketsFilters {
+  status?: TicketStatus
+  category?: TicketCategory | "uncategorized"
+  search?: string
+}
+
+export interface TicketsQuery extends TicketsSort, TicketsFilters {}
+
+export const ticketsQueryKey = (query: TicketsQuery) => ["tickets", query] as const
 export const ticketQueryKey = (id: string) => ["tickets", id] as const
 
-export function fetchTickets(sort: TicketsSort) {
+export function fetchTickets(query: TicketsQuery) {
   return api
-    .get<Ticket[]>("/api/tickets", { params: sort })
+    .get<Ticket[]>("/api/tickets", { params: query })
     .then((res) => res.data)
 }
 

@@ -1,12 +1,15 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import type { SortingState } from "@tanstack/react-table"
 
+import TicketsFilterBar from "@/components/TicketsFilterBar"
 import TicketsTable from "@/components/TicketsTable"
 import {
   fetchTickets,
   ticketsQueryKey,
   TicketSortField,
+  type TicketsFilters,
+  type TicketsQuery,
   type TicketsSort,
 } from "@/lib/tickets"
 
@@ -15,10 +18,21 @@ const defaultSort: TicketsSort = {
   sortOrder: "desc",
 }
 
+const SEARCH_DEBOUNCE_MS = 300
+
 function Tickets() {
   const [sorting, setSorting] = useState<SortingState>([
     { id: TicketSortField.createdAt, desc: true },
   ])
+  const [filters, setFilters] = useState<TicketsFilters>({})
+  const [searchInput, setSearchInput] = useState("")
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setFilters((prev) => ({ ...prev, search: searchInput.trim() || undefined }))
+    }, SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timeout)
+  }, [searchInput])
 
   const activeSort = sorting[0]
   const sort: TicketsSort = activeSort
@@ -28,13 +42,15 @@ function Tickets() {
       }
     : defaultSort
 
+  const query: TicketsQuery = { ...sort, ...filters }
+
   const {
     data: tickets,
     isPending,
     isError,
   } = useQuery({
-    queryKey: ticketsQueryKey(sort),
-    queryFn: () => fetchTickets(sort),
+    queryKey: ticketsQueryKey(query),
+    queryFn: () => fetchTickets(query),
     refetchInterval: 15000,
   })
 
@@ -43,6 +59,14 @@ function Tickets() {
       <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
         Tickets
       </h1>
+
+      <TicketsFilterBar
+        filters={filters}
+        searchInput={searchInput}
+        onSearchInputChange={setSearchInput}
+        onStatusChange={(status) => setFilters((prev) => ({ ...prev, status }))}
+        onCategoryChange={(category) => setFilters((prev) => ({ ...prev, category }))}
+      />
 
       <TicketsTable
         tickets={tickets}

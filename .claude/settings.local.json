@@ -108,7 +108,12 @@
       "Bash(grep -o '{\"type\":\"log\",\"callId\":\"call@32\"[^}]*}' 0-trace.trace)",
       "Bash(echo \"EXIT: $?\")",
       "Bash(powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 4001,5174 -State Listen -ErrorAction SilentlyContinue | Select-Object -Property OwningProcess -Unique\" 2>&1)",
-      "Bash(powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 4001,5174 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique\")"
+      "Bash(powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 4001,5174 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique\")",
+      "Bash(grep -n 'function $ZodEnum\\\\|export function enum_\\\\|declare function enum' -r node_modules/zod/v4/classic/schemas.d.ts)",
+      "Bash(./node_modules/.bin/tsc.exe --noEmit)",
+      "Bash(powershell -NoProfile -Command \"Stop-Process -Id 11220 -Force\")",
+      "Bash(echo \"client EXIT: $?\")",
+      "Bash(echo \"server EXIT: $?\")"
     ]
   }
 }
