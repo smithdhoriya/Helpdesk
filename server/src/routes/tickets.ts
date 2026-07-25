@@ -9,6 +9,7 @@ import { sendValidationError } from "../lib/validation";
 export const ticketsRouter = Router();
 
 const sortableFields = ["subject", "senderEmail", "status", "category", "createdAt"] as const;
+const PAGE_SIZE = 10;
 
 const listTicketsQuerySchema = z.object({
   sortBy: z.enum(sortableFields).default("createdAt"),
@@ -16,6 +17,7 @@ const listTicketsQuerySchema = z.object({
   status: z.enum(TicketStatus).optional(),
   category: z.enum([...Object.values(TicketCategory), "uncategorized"]).optional(),
   search: z.string().trim().min(1).optional(),
+  page: z.coerce.number().int().min(1).default(1),
 });
 
 ticketsRouter.get("/", async (req, res) => {
@@ -25,7 +27,7 @@ ticketsRouter.get("/", async (req, res) => {
     return;
   }
 
-  const { sortBy, sortOrder, status, category, search } = parsed.data;
+  const { sortBy, sortOrder, status, category, search, page } = parsed.data;
 
   const where: Prisma.TicketWhereInput = {
     status,
@@ -38,12 +40,17 @@ ticketsRouter.get("/", async (req, res) => {
     }),
   };
 
-  const tickets = await prisma.ticket.findMany({
-    where,
-    orderBy: { [sortBy]: sortOrder },
-  });
+  const [tickets, total] = await prisma.$transaction([
+    prisma.ticket.findMany({
+      where,
+      orderBy: { [sortBy]: sortOrder },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    prisma.ticket.count({ where }),
+  ]);
 
-  res.json(tickets);
+  res.json({ tickets, total, page, pageSize: PAGE_SIZE });
 });
 
 ticketsRouter.get("/:id", async (req, res) => {

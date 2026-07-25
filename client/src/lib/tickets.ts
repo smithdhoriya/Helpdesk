@@ -61,14 +61,25 @@ export interface TicketsFilters {
   search?: string
 }
 
-export interface TicketsQuery extends TicketsSort, TicketsFilters {}
+export interface TicketsPagination {
+  page: number
+}
+
+export interface TicketsQuery extends TicketsSort, TicketsFilters, TicketsPagination {}
+
+export interface TicketsPage {
+  tickets: Ticket[]
+  total: number
+  page: number
+  pageSize: number
+}
 
 export const ticketsQueryKey = (query: TicketsQuery) => ["tickets", query] as const
 export const ticketQueryKey = (id: string) => ["tickets", id] as const
 
 export function fetchTickets(query: TicketsQuery) {
   return api
-    .get<Ticket[]>("/api/tickets", { params: query })
+    .get<TicketsPage>("/api/tickets", { params: query })
     .then((res) => res.data)
 }
 

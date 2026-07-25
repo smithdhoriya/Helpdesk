@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import type { SortingState } from "@tanstack/react-table"
 
 import TicketsFilterBar from "@/components/TicketsFilterBar"
+import TicketsPagination from "@/components/TicketsPagination"
 import TicketsTable from "@/components/TicketsTable"
 import {
   fetchTickets,
@@ -26,10 +27,12 @@ function Tickets() {
   ])
   const [filters, setFilters] = useState<TicketsFilters>({})
   const [searchInput, setSearchInput] = useState("")
+  const [page, setPage] = useState(1)
 
   useEffect(() => {
     const timeout = setTimeout(() => {
       setFilters((prev) => ({ ...prev, search: searchInput.trim() || undefined }))
+      setPage(1)
     }, SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(timeout)
   }, [searchInput])
@@ -42,15 +45,16 @@ function Tickets() {
       }
     : defaultSort
 
-  const query: TicketsQuery = { ...sort, ...filters }
+  const query: TicketsQuery = { ...sort, ...filters, page }
 
   const {
-    data: tickets,
+    data,
     isPending,
     isError,
   } = useQuery({
     queryKey: ticketsQueryKey(query),
     queryFn: () => fetchTickets(query),
+    placeholderData: keepPreviousData,
     refetchInterval: 15000,
   })
 
@@ -64,17 +68,35 @@ function Tickets() {
         filters={filters}
         searchInput={searchInput}
         onSearchInputChange={setSearchInput}
-        onStatusChange={(status) => setFilters((prev) => ({ ...prev, status }))}
-        onCategoryChange={(category) => setFilters((prev) => ({ ...prev, category }))}
+        onStatusChange={(status) => {
+          setFilters((prev) => ({ ...prev, status }))
+          setPage(1)
+        }}
+        onCategoryChange={(category) => {
+          setFilters((prev) => ({ ...prev, category }))
+          setPage(1)
+        }}
       />
 
       <TicketsTable
-        tickets={tickets}
+        tickets={data?.tickets}
         isPending={isPending}
         isError={isError}
         sorting={sorting}
-        onSortingChange={setSorting}
+        onSortingChange={(updater) => {
+          setSorting(updater)
+          setPage(1)
+        }}
       />
+
+      {data && (
+        <TicketsPagination
+          page={data.page}
+          pageSize={data.pageSize}
+          total={data.total}
+          onPageChange={setPage}
+        />
+      )}
     </div>
   )
 }
