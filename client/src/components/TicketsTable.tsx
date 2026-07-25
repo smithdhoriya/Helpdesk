@@ -10,7 +10,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
-import { TicketStatus, ticketCategoryLabels, type Ticket } from "@/lib/tickets"
+import {
+  TicketStatus,
+  ticketCategoryLabels,
+  ticketStatusLabels,
+  type Ticket,
+} from "@/lib/tickets"
 
 interface TicketsTableProps {
   tickets: Ticket[] | undefined
@@ -27,6 +32,7 @@ const statusVariant: Record<TicketStatus, "default" | "secondary" | "outline"> =
 function TicketsTable({ tickets, isPending, isError }: TicketsTableProps) {
   const navigate = useNavigate()
 
+  
   return (
     <div className="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm">
       {isError && (
@@ -76,7 +82,7 @@ function TicketsTable({ tickets, isPending, isError }: TicketsTableProps) {
                 <TableCell>{ticket.senderEmail}</TableCell>
                 <TableCell>
                   <Badge variant={statusVariant[ticket.status]}>
-                    {ticket.status}
+                    {ticketStatusLabels[ticket.status]}
                   </Badge>
                 </TableCell>
                 <TableCell>

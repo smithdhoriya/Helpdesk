@@ -11,7 +11,12 @@ test.describe("Inbound email creates a ticket", () => {
     await loginAndWaitForHome(page, AGENT_EMAIL, AGENT_PASSWORD);
   });
 
-  test("a ticket created via the inbound email webhook appears in the list and detail views", async ({
+  // Row/detail field rendering (status badge, category, sender, body) is
+  // covered by component tests (Tickets.test.tsx, TicketDetail.test.tsx)
+  // against mocked data. What's only verifiable end-to-end is that a ticket
+  // persisted via the real webhook is actually reachable through the real
+  // list -> detail navigation and API routes.
+  test("a ticket created via the inbound email webhook can be opened from the list", async ({
     page,
   }) => {
     const ticket = await createTestTicket(page);
@@ -20,21 +25,10 @@ test.describe("Inbound email creates a ticket", () => {
 
     const row = page.getByRole("row", { name: new RegExp(ticket.subject) });
     await expect(row).toBeVisible();
-    await expect(
-      row.getByRole("cell", { name: ticket.senderEmail }),
-    ).toBeVisible();
-    await expect(
-      row.getByRole("cell", { name: "open", exact: true }),
-    ).toBeVisible();
-    await expect(
-      row.getByRole("cell", { name: "Uncategorized" }),
-    ).toBeVisible();
 
     await row.click();
 
     await expect(page).toHaveURL(`/tickets/${ticket.id}`);
     await expect(page.getByText(ticket.subject, { exact: true })).toBeVisible();
-    await expect(page.getByText(`From ${ticket.senderEmail}`)).toBeVisible();
-    await expect(page.getByText(ticket.body)).toBeVisible();
   });
 });

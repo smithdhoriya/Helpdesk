@@ -1,16 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { screen, within } from "@testing-library/react"
-import { MemoryRouter } from "react-router"
+import userEvent from "@testing-library/user-event"
+import { MemoryRouter, Route, Routes } from "react-router"
 
 import { api } from "@/lib/api"
 import { renderWithQuery } from "@/test/render"
-import { TicketStatus, TicketCategory } from "@/lib/tickets"
+import { TicketStatus, TicketCategory, ticketStatusLabels } from "@/lib/tickets"
 import Tickets from "./Tickets"
 
 function renderTickets() {
   return renderWithQuery(
     <MemoryRouter>
       <Tickets />
+    </MemoryRouter>
+  )
+}
+
+function renderTicketsWithRouting() {
+  return renderWithQuery(
+    <MemoryRouter initialEntries={["/tickets"]}>
+      <Routes>
+        <Route path="/tickets" element={<Tickets />} />
+        <Route path="/tickets/:id" element={<div>Ticket Detail Page</div>} />
+      </Routes>
     </MemoryRouter>
   )
 }
@@ -82,15 +94,26 @@ describe("Tickets page", () => {
 
     const firstRow = within(rows[1])
     expect(firstRow.getByText("customer@example.com")).toBeInTheDocument()
-    expect(firstRow.getByText(TicketStatus.open)).toBeInTheDocument()
+    expect(firstRow.getByText(ticketStatusLabels[TicketStatus.open])).toBeInTheDocument()
     expect(firstRow.getByText("Technical Question")).toBeInTheDocument()
 
     const secondRow = within(rows[2])
     expect(secondRow.getByText("Refund please")).toBeInTheDocument()
-    expect(secondRow.getByText(TicketStatus.resolved)).toBeInTheDocument()
+    expect(secondRow.getByText(ticketStatusLabels[TicketStatus.resolved])).toBeInTheDocument()
     expect(secondRow.getByText("Uncategorized")).toBeInTheDocument()
 
     expect(screen.queryByText("Failed to load tickets")).not.toBeInTheDocument()
+  })
+
+  it("navigates to the ticket detail page when a row is clicked", async () => {
+    mockGet.mockResolvedValue({ data: tickets })
+
+    renderTicketsWithRouting()
+
+    const row = (await screen.findByText("Can't log in")).closest("tr")!
+    await userEvent.click(row)
+
+    expect(await screen.findByText("Ticket Detail Page")).toBeInTheDocument()
   })
 
   it("shows an error message when the request fails", async () => {

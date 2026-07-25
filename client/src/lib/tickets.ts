@@ -8,6 +8,12 @@ export const TicketStatus = {
 
 export type TicketStatus = (typeof TicketStatus)[keyof typeof TicketStatus]
 
+export const ticketStatusLabels: Record<TicketStatus, string> = {
+  [TicketStatus.open]: "Open",
+  [TicketStatus.resolved]: "Resolved",
+  [TicketStatus.closed]: "Closed",
+}
+
 export const TicketCategory = {
   generalQuestion: "generalQuestion",
   technicalQuestion: "technicalQuestion",

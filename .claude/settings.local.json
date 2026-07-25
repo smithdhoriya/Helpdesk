@@ -85,7 +85,8 @@
       "Bash(bunx playwright *)",
       "Bash(psql \"postgresql://postgres:Postgres%402026@localhost:5432/helpdesk\" -c \"SELECT count\\(*\\) FROM ticket;\")",
       "Bash(npx tsc *)",
-      "Bash(node_modules/.bin/tsc --noEmit -p .)"
+      "Bash(node_modules/.bin/tsc --noEmit -p .)",
+      "Bash(powershell -Command \"Get-ChildItem -Path 'D:\\\\mydata\\\\claude-code\\\\Helpdesk\\\\e2e\\\\tests' -Filter '*.spec.ts' | Select-Object -ExpandProperty Name\")"
     ]
   }
 }

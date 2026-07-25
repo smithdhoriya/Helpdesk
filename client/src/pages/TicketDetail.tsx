@@ -4,7 +4,12 @@ import { useQuery } from "@tanstack/react-query"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { fetchTicket, ticketCategoryLabels, ticketQueryKey } from "@/lib/tickets"
+import {
+  fetchTicket,
+  ticketCategoryLabels,
+  ticketQueryKey,
+  ticketStatusLabels,
+} from "@/lib/tickets"
 
 function TicketDetail() {
   const { id } = useParams<{ id: string }>()
@@ -35,7 +40,7 @@ function TicketDetail() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl">{ticket.subject}</CardTitle>
-              <Badge>{ticket.status}</Badge>
+              <Badge>{ticketStatusLabels[ticket.status]}</Badge>
             </div>
             <p className="text-sm text-gray-600">From {ticket.senderEmail}</p>
           </CardHeader>
