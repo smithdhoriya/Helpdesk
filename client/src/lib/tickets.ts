@@ -40,11 +40,28 @@ export type Ticket = {
   updatedAt: string
 }
 
-export const ticketsQueryKey = ["tickets"] as const
+export const TicketSortField = {
+  subject: "subject",
+  senderEmail: "senderEmail",
+  status: "status",
+  category: "category",
+  createdAt: "createdAt",
+} as const
+
+export type TicketSortField = (typeof TicketSortField)[keyof typeof TicketSortField]
+
+export interface TicketsSort {
+  sortBy: TicketSortField
+  sortOrder: "asc" | "desc"
+}
+
+export const ticketsQueryKey = (sort: TicketsSort) => ["tickets", sort] as const
 export const ticketQueryKey = (id: string) => ["tickets", id] as const
 
-export function fetchTickets() {
-  return api.get<Ticket[]>("/api/tickets").then((res) => res.data)
+export function fetchTickets(sort: TicketsSort) {
+  return api
+    .get<Ticket[]>("/api/tickets", { params: sort })
+    .then((res) => res.data)
 }
 
 export function fetchTicket(id: string) {

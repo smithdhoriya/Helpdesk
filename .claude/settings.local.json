@@ -86,7 +86,29 @@
       "Bash(psql \"postgresql://postgres:Postgres%402026@localhost:5432/helpdesk\" -c \"SELECT count\\(*\\) FROM ticket;\")",
       "Bash(npx tsc *)",
       "Bash(node_modules/.bin/tsc --noEmit -p .)",
-      "Bash(powershell -Command \"Get-ChildItem -Path 'D:\\\\mydata\\\\claude-code\\\\Helpdesk\\\\e2e\\\\tests' -Filter '*.spec.ts' | Select-Object -ExpandProperty Name\")"
+      "Bash(powershell -Command \"Get-ChildItem -Path 'D:\\\\mydata\\\\claude-code\\\\Helpdesk\\\\e2e\\\\tests' -Filter '*.spec.ts' | Select-Object -ExpandProperty Name\")",
+      "Bash(npm view *)",
+      "mcp__ide__getDiagnostics",
+      "Bash(rm -rf node_modules/.tmp)",
+      "Bash(npx --no -- tsc -b --force)",
+      "Bash(node_modules/.bin/vite --version)",
+      "Bash(./node_modules/.bin/tsc -b --force)",
+      "Bash(./node_modules/.bin/tsc.exe -b --force)",
+      "Bash(echo \"EXIT CODE: $?\")",
+      "Bash(./node_modules/.bin/tsc.exe --version)",
+      "Bash(xargs -I{} echo {})",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(t['createdAt'], t['subject']\\) for t in d[:5]]\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(t['subject']\\) for t in d[:5]]\")",
+      "Bash(curl -s -b /tmp/cookies.txt \"http://localhost:4000/api/tickets\")",
+      "Bash(curl -s -b /tmp/cookies.txt \"http://localhost:4000/api/tickets?sortBy=subject&sortOrder=asc\")",
+      "Read(//tmp/**)",
+      "Bash(awk -F'\"time\":' '{if \\(NF>1\\) {split\\($2,a,\",\"\\); if \\(a[1]+0 > 10253\\) c++}} END{print c}' 0-trace.trace)",
+      "Bash(grep -o '\"type\":\"[a-zA-Z]*\"[^}]*\"time\":1[0-9]\\\\{4\\\\}[^,]*' 0-trace.trace)",
+      "Bash(python3)",
+      "Bash(grep -o '{\"type\":\"log\",\"callId\":\"call@32\"[^}]*}' 0-trace.trace)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 4001,5174 -State Listen -ErrorAction SilentlyContinue | Select-Object -Property OwningProcess -Unique\" 2>&1)",
+      "Bash(powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 4001,5174 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique\")"
     ]
   }
 }

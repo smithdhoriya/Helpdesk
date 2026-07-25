@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { screen, within } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter, Route, Routes } from "react-router"
 
@@ -123,5 +123,114 @@ describe("Tickets page", () => {
 
     expect(await screen.findByText("Failed to load tickets")).toBeInTheDocument()
     expect(screen.queryByRole("table")).not.toBeInTheDocument()
+  })
+
+  it("sorts by createdAt descending by default", async () => {
+    mockGet.mockResolvedValue({ data: tickets })
+
+    renderTickets()
+
+    await screen.findByText("Can't log in")
+
+    expect(mockGet).toHaveBeenCalledWith("/api/tickets", {
+      params: { sortBy: "createdAt", sortOrder: "desc" },
+    })
+    expect(screen.getByRole("columnheader", { name: "Created" })).toHaveAttribute(
+      "aria-sort",
+      "descending"
+    )
+  })
+
+  it("requests ascending order the first time an unsorted column header is clicked", async () => {
+    mockGet.mockResolvedValue({ data: tickets })
+
+    renderTickets()
+    await screen.findByText("Can't log in")
+
+    await userEvent.click(screen.getByRole("button", { name: "Subject" }))
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenLastCalledWith("/api/tickets", {
+        params: { sortBy: "subject", sortOrder: "asc" },
+      })
+    })
+    expect(screen.getByRole("columnheader", { name: "Subject" })).toHaveAttribute(
+      "aria-sort",
+      "ascending"
+    )
+    // switching the active column resets the previously active one
+    expect(screen.getByRole("columnheader", { name: "Created" })).toHaveAttribute(
+      "aria-sort",
+      "none"
+    )
+  })
+
+  it("toggles asc -> desc -> cleared (back to default) across three clicks", async () => {
+    mockGet.mockResolvedValue({ data: tickets })
+
+    renderTickets()
+    await screen.findByText("Can't log in")
+
+    const subjectHeader = screen.getByRole("button", { name: "Subject" })
+
+    await userEvent.click(subjectHeader)
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenLastCalledWith("/api/tickets", {
+        params: { sortBy: "subject", sortOrder: "asc" },
+      })
+    })
+
+    await userEvent.click(subjectHeader)
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenLastCalledWith("/api/tickets", {
+        params: { sortBy: "subject", sortOrder: "desc" },
+      })
+    })
+
+    await userEvent.click(subjectHeader)
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenLastCalledWith("/api/tickets", {
+        params: { sortBy: "createdAt", sortOrder: "desc" },
+      })
+    })
+    expect(screen.getByRole("columnheader", { name: "Subject" })).toHaveAttribute(
+      "aria-sort",
+      "none"
+    )
+  })
+
+  it("re-renders rows in the order the server returns after a header is clicked", async () => {
+    // Realistic default order (createdAt desc, newest first): "Refund please" (March)
+    // before "Can't log in" (January) — deliberately the reverse of subject-ascending
+    // order below, so this test actually proves a re-render reordered the rows rather
+    // than coincidentally rendering the same order both times.
+    const defaultOrderTickets = [tickets[1], tickets[0]]
+    const subjectAscTickets = [...tickets].sort((a, b) =>
+      a.subject.localeCompare(b.subject)
+    )
+
+    mockGet.mockImplementation((_url, config) => {
+      const params = (config as { params: { sortBy: string } }).params
+      const data = params.sortBy === "subject" ? subjectAscTickets : defaultOrderTickets
+      return Promise.resolve({ data })
+    })
+
+    renderTickets()
+    await screen.findByText("Refund please")
+
+    let rows = screen.getAllByRole("row")
+    expect(within(rows[1]).getByText("Refund please")).toBeInTheDocument()
+    expect(within(rows[2]).getByText("Can't log in")).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: "Subject" }))
+
+    await waitFor(() => {
+      const updatedRows = screen.getAllByRole("row")
+      expect(within(updatedRows[1]).getByText("Can't log in")).toBeInTheDocument()
+      expect(within(updatedRows[2]).getByText("Refund please")).toBeInTheDocument()
+    })
+
+    rows = screen.getAllByRole("row")
+    expect(rows).toHaveLength(3)
   })
 })

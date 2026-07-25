@@ -1,12 +1,29 @@
 import { Router } from "express";
+import { z } from "zod";
 
 import { prisma } from "../db";
+import { sendValidationError } from "../lib/validation";
 
 export const ticketsRouter = Router();
 
-ticketsRouter.get("/", async (_req, res) => {
+const sortableFields = ["subject", "senderEmail", "status", "category", "createdAt"] as const;
+
+const listTicketsQuerySchema = z.object({
+  sortBy: z.enum(sortableFields).default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+});
+
+ticketsRouter.get("/", async (req, res) => {
+  const parsed = listTicketsQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    sendValidationError(res, parsed.error);
+    return;
+  }
+
+  const { sortBy, sortOrder } = parsed.data;
+
   const tickets = await prisma.ticket.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: { [sortBy]: sortOrder },
   });
 
   res.json(tickets);
