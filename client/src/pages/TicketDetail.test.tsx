@@ -162,4 +162,56 @@ describe("TicketDetail page", () => {
 
     expect(mockPatch).toHaveBeenCalledWith("/api/tickets/1", { assignedTo: null })
   })
+
+  it("updates the ticket status", async () => {
+    mockGetByUrl({ ticket })
+    mockPatch.mockResolvedValue({ data: { ...ticket, status: TicketStatus.resolved } })
+
+    renderTicketDetail()
+    await screen.findByText("Can't log in")
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Status" }))
+    await userEvent.click(
+      await screen.findByRole("option", { name: ticketStatusLabels[TicketStatus.resolved] })
+    )
+
+    expect(mockPatch).toHaveBeenCalledWith("/api/tickets/1", {
+      status: TicketStatus.resolved,
+    })
+    expect(
+      await screen.findByRole("combobox", { name: "Status" })
+    ).toHaveTextContent(ticketStatusLabels[TicketStatus.resolved])
+  })
+
+  it("updates the ticket category", async () => {
+    mockGetByUrl({ ticket })
+    mockPatch.mockResolvedValue({ data: { ...ticket, category: TicketCategory.refundRequest } })
+
+    renderTicketDetail()
+    await screen.findByText("Can't log in")
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Category" }))
+    await userEvent.click(
+      await screen.findByRole("option", {
+        name: ticketCategoryLabels[TicketCategory.refundRequest],
+      })
+    )
+
+    expect(mockPatch).toHaveBeenCalledWith("/api/tickets/1", {
+      category: TicketCategory.refundRequest,
+    })
+  })
+
+  it("clears the category when 'Uncategorized' is selected", async () => {
+    mockGetByUrl({ ticket })
+    mockPatch.mockResolvedValue({ data: { ...ticket, category: null } })
+
+    renderTicketDetail()
+    await screen.findByText("Can't log in")
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Category" }))
+    await userEvent.click(await screen.findByRole("option", { name: "Uncategorized" }))
+
+    expect(mockPatch).toHaveBeenCalledWith("/api/tickets/1", { category: null })
+  })
 })

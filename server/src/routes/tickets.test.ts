@@ -168,6 +168,78 @@ describe("PATCH /api/tickets/:id", () => {
     expect(mockPrisma.ticket.update).not.toHaveBeenCalled();
   });
 
+  it("updates the status without touching the agent lookup", async () => {
+    mockPrisma.ticket.findUnique.mockResolvedValue(ticket as never);
+    mockPrisma.ticket.update.mockResolvedValue({ ...ticket, status: "resolved" } as never);
+
+    const res = await request(app)
+      .patch("/api/tickets/ticket-1")
+      .send({ status: "resolved" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("resolved");
+    expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
+    expect(mockPrisma.ticket.update).toHaveBeenCalledWith({
+      where: { id: "ticket-1" },
+      data: { status: "resolved" },
+      include: { assignee: { select: { id: true, name: true } } },
+    });
+  });
+
+  it("updates the category", async () => {
+    mockPrisma.ticket.findUnique.mockResolvedValue(ticket as never);
+    mockPrisma.ticket.update.mockResolvedValue(
+      { ...ticket, category: "refundRequest" } as never,
+    );
+
+    const res = await request(app)
+      .patch("/api/tickets/ticket-1")
+      .send({ category: "refundRequest" });
+
+    expect(res.status).toBe(200);
+    expect(mockPrisma.ticket.update).toHaveBeenCalledWith({
+      where: { id: "ticket-1" },
+      data: { category: "refundRequest" },
+      include: { assignee: { select: { id: true, name: true } } },
+    });
+  });
+
+  it("clears the category when category is null", async () => {
+    mockPrisma.ticket.findUnique.mockResolvedValue(ticket as never);
+    mockPrisma.ticket.update.mockResolvedValue({ ...ticket, category: null } as never);
+
+    const res = await request(app)
+      .patch("/api/tickets/ticket-1")
+      .send({ category: null });
+
+    expect(res.status).toBe(200);
+    expect(mockPrisma.ticket.update).toHaveBeenCalledWith({
+      where: { id: "ticket-1" },
+      data: { category: null },
+      include: { assignee: { select: { id: true, name: true } } },
+    });
+  });
+
+  it("returns 400 for an invalid status value", async () => {
+    const res = await request(app)
+      .patch("/api/tickets/ticket-1")
+      .send({ status: "archived" });
+
+    expect(res.status).toBe(400);
+    expect(mockPrisma.ticket.findUnique).not.toHaveBeenCalled();
+    expect(mockPrisma.ticket.update).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for an invalid category value", async () => {
+    const res = await request(app)
+      .patch("/api/tickets/ticket-1")
+      .send({ category: "billing" });
+
+    expect(res.status).toBe(400);
+    expect(mockPrisma.ticket.findUnique).not.toHaveBeenCalled();
+    expect(mockPrisma.ticket.update).not.toHaveBeenCalled();
+  });
+
   it("returns 400 when the body fails validation", async () => {
     const res = await request(app)
       .patch("/api/tickets/ticket-1")

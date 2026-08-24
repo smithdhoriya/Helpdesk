@@ -98,8 +98,14 @@ export function fetchTicketAgents() {
   return api.get<Agent[]>("/api/tickets/agents").then((res) => res.data)
 }
 
-export function assignTicket(id: string, assignedTo: string | null) {
+export interface TicketUpdate {
+  status?: TicketStatus
+  category?: TicketCategory | null
+  assignedTo?: string | null
+}
+
+export function updateTicket(id: string, data: TicketUpdate) {
   return api
-    .patch<Ticket>(`/api/tickets/${id}`, { assignedTo })
+    .patch<Ticket>(`/api/tickets/${id}`, data)
     .then((res) => res.data)
 }

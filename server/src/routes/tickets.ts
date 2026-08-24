@@ -20,8 +20,10 @@ const listTicketsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
 });
 
-const assignTicketSchema = z.object({
-  assignedTo: z.string().nullable(),
+const updateTicketSchema = z.object({
+  assignedTo: z.string().nullable().optional(),
+  status: z.enum(TicketStatus).optional(),
+  category: z.enum(TicketCategory).nullable().optional(),
 });
 
 ticketsRouter.get("/", async (req, res) => {
@@ -84,14 +86,14 @@ ticketsRouter.get("/:id", async (req, res) => {
 });
 
 ticketsRouter.patch("/:id", async (req, res) => {
-  const parsed = assignTicketSchema.safeParse(req.body);
+  const parsed = updateTicketSchema.safeParse(req.body);
   if (!parsed.success) {
     sendValidationError(res, parsed.error);
     return;
   }
 
   const { id } = req.params;
-  const { assignedTo } = parsed.data;
+  const data = parsed.data;
 
   const ticket = await prisma.ticket.findUnique({ where: { id } });
   if (!ticket) {
@@ -99,8 +101,8 @@ ticketsRouter.patch("/:id", async (req, res) => {
     return;
   }
 
-  if (assignedTo) {
-    const agent = await prisma.user.findUnique({ where: { id: assignedTo, deletedAt: null } });
+  if (data.assignedTo) {
+    const agent = await prisma.user.findUnique({ where: { id: data.assignedTo, deletedAt: null } });
     if (!agent) {
       res.status(400).json({ error: "Agent not found" });
       return;
@@ -109,7 +111,7 @@ ticketsRouter.patch("/:id", async (req, res) => {
 
   const updated = await prisma.ticket.update({
     where: { id },
-    data: { assignedTo },
+    data,
     include: { assignee: { select: { id: true, name: true } } },
   });
 
