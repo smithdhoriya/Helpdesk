@@ -20,6 +20,10 @@ const listTicketsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
 });
 
+const assignTicketSchema = z.object({
+  assignedTo: z.string().nullable(),
+});
+
 ticketsRouter.get("/", async (req, res) => {
   const parsed = listTicketsQuerySchema.safeParse(req.query);
   if (!parsed.success) {
@@ -53,8 +57,41 @@ ticketsRouter.get("/", async (req, res) => {
   res.json({ tickets, total, page, pageSize: PAGE_SIZE });
 });
 
+// Registered before "/:id" so "agents" isn't captured as a ticket id.
+ticketsRouter.get("/agents", async (_req, res) => {
+  const agents = await prisma.user.findMany({
+    where: { deletedAt: null },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+
+  res.json(agents);
+});
+
 ticketsRouter.get("/:id", async (req, res) => {
   const { id } = req.params;
+
+  const ticket = await prisma.ticket.findUnique({
+    where: { id },
+    include: { assignee: { select: { id: true, name: true } } },
+  });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  res.json(ticket);
+});
+
+ticketsRouter.patch("/:id", async (req, res) => {
+  const parsed = assignTicketSchema.safeParse(req.body);
+  if (!parsed.success) {
+    sendValidationError(res, parsed.error);
+    return;
+  }
+
+  const { id } = req.params;
+  const { assignedTo } = parsed.data;
 
   const ticket = await prisma.ticket.findUnique({ where: { id } });
   if (!ticket) {
@@ -62,5 +99,19 @@ ticketsRouter.get("/:id", async (req, res) => {
     return;
   }
 
-  res.json(ticket);
+  if (assignedTo) {
+    const agent = await prisma.user.findUnique({ where: { id: assignedTo, deletedAt: null } });
+    if (!agent) {
+      res.status(400).json({ error: "Agent not found" });
+      return;
+    }
+  }
+
+  const updated = await prisma.ticket.update({
+    where: { id },
+    data: { assignedTo },
+    include: { assignee: { select: { id: true, name: true } } },
+  });
+
+  res.json(updated);
 });

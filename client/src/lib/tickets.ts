@@ -36,8 +36,14 @@ export type Ticket = {
   status: TicketStatus
   category: TicketCategory | null
   assignedTo: string | null
+  assignee?: Agent | null
   createdAt: string
   updatedAt: string
+}
+
+export type Agent = {
+  id: string
+  name: string
 }
 
 export const TicketSortField = {
@@ -76,6 +82,7 @@ export interface TicketsPage {
 
 export const ticketsQueryKey = (query: TicketsQuery) => ["tickets", query] as const
 export const ticketQueryKey = (id: string) => ["tickets", id] as const
+export const ticketAgentsQueryKey = ["tickets", "agents"] as const
 
 export function fetchTickets(query: TicketsQuery) {
   return api
@@ -85,4 +92,14 @@ export function fetchTickets(query: TicketsQuery) {
 
 export function fetchTicket(id: string) {
   return api.get<Ticket>(`/api/tickets/${id}`).then((res) => res.data)
+}
+
+export function fetchTicketAgents() {
+  return api.get<Agent[]>("/api/tickets/agents").then((res) => res.data)
+}
+
+export function assignTicket(id: string, assignedTo: string | null) {
+  return api
+    .patch<Ticket>(`/api/tickets/${id}`, { assignedTo })
+    .then((res) => res.data)
 }

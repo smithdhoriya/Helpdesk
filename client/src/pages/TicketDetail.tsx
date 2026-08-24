@@ -1,19 +1,32 @@
 import { Link, useParams } from "react-router"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
+  assignTicket,
   fetchTicket,
+  fetchTicketAgents,
+  ticketAgentsQueryKey,
   ticketCategoryLabels,
   ticketQueryKey,
   ticketStatusLabels,
 } from "@/lib/tickets"
 
+const UNASSIGNED = "unassigned"
+
 function TicketDetail() {
   const { id } = useParams<{ id: string }>()
+  const queryClient = useQueryClient()
 
   const {
     data: ticket,
@@ -24,6 +37,23 @@ function TicketDetail() {
     queryFn: () => fetchTicket(id!),
     enabled: Boolean(id),
   })
+
+  const { data: agents } = useQuery({
+    queryKey: ticketAgentsQueryKey,
+    queryFn: fetchTicketAgents,
+  })
+
+  const { mutate: assign, isPending: isAssigning } = useMutation({
+    mutationFn: (assignedTo: string | null) => assignTicket(id!, assignedTo),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(ticketQueryKey(id!), updated)
+    },
+  })
+
+  const agentItems = [
+    { value: UNASSIGNED, label: "Unassigned" },
+    ...(agents ?? []).map((agent) => ({ value: agent.id, label: agent.name })),
+  ]
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
@@ -59,6 +89,29 @@ function TicketDetail() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">Assigned to</span>
+              <Select
+                items={agentItems}
+                value={ticket.assignedTo ?? UNASSIGNED}
+                disabled={isAssigning}
+                onValueChange={(value) =>
+                  assign(value === UNASSIGNED ? null : (value as string))
+                }
+              >
+                <SelectTrigger aria-label="Assigned to" size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {agentItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <h2 className="text-sm font-semibold text-gray-900">Message</h2>
               <p className="whitespace-pre-wrap text-sm text-gray-900">
