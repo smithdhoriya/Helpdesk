@@ -1,11 +1,5 @@
+import SelectField from "@/components/SelectField"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   TicketCategory,
   TicketStatus,
@@ -59,45 +53,25 @@ function TicketsFilterBar({
         aria-label="Search tickets"
       />
 
-      <Select
+      <SelectField
         items={statusItems}
         value={filters.status ?? ALL_STATUSES}
+        label="Filter by status"
         onValueChange={(value) =>
           onStatusChange(value === ALL_STATUSES ? undefined : (value as TicketStatus))
         }
-      >
-        <SelectTrigger aria-label="Filter by status">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {statusItems.map((item) => (
-            <SelectItem key={item.value} value={item.value}>
-              {item.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      />
 
-      <Select
+      <SelectField
         items={categoryItems}
         value={filters.category ?? ALL_CATEGORIES}
+        label="Filter by category"
         onValueChange={(value) =>
           onCategoryChange(
             value === ALL_CATEGORIES ? undefined : (value as TicketsFilters["category"])
           )
         }
-      >
-        <SelectTrigger aria-label="Filter by category">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {categoryItems.map((item) => (
-            <SelectItem key={item.value} value={item.value}>
-              {item.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      />
     </div>
   )
 }

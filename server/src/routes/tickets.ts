@@ -26,6 +26,12 @@ const updateTicketSchema = z.object({
   category: z.enum(TicketCategory).nullable().optional(),
 });
 
+const createReplySchema = z.object({
+  body: z.string().trim().min(1, "Reply cannot be empty"),
+});
+
+const replyAuthorSelect = { id: true, name: true } as const;
+
 ticketsRouter.get("/", async (req, res) => {
   const parsed = listTicketsQuerySchema.safeParse(req.query);
   if (!parsed.success) {
@@ -116,4 +122,49 @@ ticketsRouter.patch("/:id", async (req, res) => {
   });
 
   res.json(updated);
+});
+
+ticketsRouter.get("/:id/replies", async (req, res) => {
+  const { id } = req.params;
+
+  const ticket = await prisma.ticket.findUnique({ where: { id } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const replies = await prisma.reply.findMany({
+    where: { ticketId: id },
+    include: { author: { select: replyAuthorSelect } },
+    orderBy: { createdAt: "asc" },
+  });
+
+  res.json(replies);
+});
+
+ticketsRouter.post("/:id/replies", async (req, res) => {
+  const parsed = createReplySchema.safeParse(req.body);
+  if (!parsed.success) {
+    sendValidationError(res, parsed.error);
+    return;
+  }
+
+  const { id } = req.params;
+
+  const ticket = await prisma.ticket.findUnique({ where: { id } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const reply = await prisma.reply.create({
+    data: {
+      ticketId: id,
+      authorId: req.user!.id,
+      body: parsed.data.body,
+    },
+    include: { author: { select: replyAuthorSelect } },
+  });
+
+  res.status(201).json(reply);
 });

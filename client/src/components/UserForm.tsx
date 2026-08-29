@@ -1,6 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import axios from "axios"
 import { useState } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { z } from "zod"
@@ -15,6 +14,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { getApiErrorMessage } from "@/lib/api"
 import { createUser, updateUser, usersQueryKey, type User } from "@/lib/users"
 
 const createUserSchema = z.object({
@@ -78,10 +78,7 @@ function UserForm({ user, onSuccess }: UserFormProps) {
       reset()
       onSuccess()
     } catch (err) {
-      const message = axios.isAxiosError(err)
-        ? (err.response?.data as { error?: string } | undefined)?.error
-        : undefined
-      setError(message ?? "Failed to create user")
+      setError(getApiErrorMessage(err, "Failed to create user"))
     }
   }
 

@@ -115,7 +115,9 @@
       "Bash(echo \"client EXIT: $?\")",
       "Bash(echo \"server EXIT: $?\")",
       "Bash(PGPASSWORD='Postgres@2026' psql -h localhost -p 5432 -U postgres -d helpdesk -c 'SELECT email, role, \"emailVerified\" FROM \"user\" ORDER BY role;')",
-      "Bash(echo \"EXIT=$?\")"
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(echo \"TSC_DONE exit=$?\")",
+      "Bash(echo \"TSC exit=$?\")"
     ]
   }
 }

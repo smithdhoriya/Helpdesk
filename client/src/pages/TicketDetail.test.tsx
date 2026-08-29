@@ -23,12 +23,14 @@ function renderTicketDetail(id = "1") {
   )
 }
 
-vi.mock("@/lib/api", () => ({
-  api: { get: vi.fn(), patch: vi.fn() },
+vi.mock("@/lib/api", async (importActual) => ({
+  ...(await importActual<typeof import("@/lib/api")>()),
+  api: { get: vi.fn(), patch: vi.fn(), post: vi.fn() },
 }))
 
 const mockGet = vi.mocked(api.get)
 const mockPatch = vi.mocked(api.patch)
+const mockPost = vi.mocked(api.post)
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -55,12 +57,34 @@ const agents = [
   { id: "agent-2", name: "Bob Agent" },
 ]
 
-// Both the ticket and the agents list are fetched via the same mocked `api.get`,
-// so responses are routed by URL to keep each test's intent readable.
-function mockGetByUrl({ ticket, agents: agentsData = agents }: { ticket: unknown; agents?: unknown }) {
+const replies = [
+  {
+    id: "reply-1",
+    ticketId: "1",
+    authorId: "agent-1",
+    author: { id: "agent-1", name: "Alice Agent" },
+    body: "Have you tried resetting your password?",
+    createdAt: "2024-01-16T00:00:00.000Z",
+  },
+]
+
+// The ticket, agents list, and replies are all fetched via the same mocked
+// `api.get`, so responses are routed by URL to keep each test's intent readable.
+function mockGetByUrl({
+  ticket,
+  agents: agentsData = agents,
+  replies: repliesData = [],
+}: {
+  ticket: unknown
+  agents?: unknown
+  replies?: unknown
+}) {
   mockGet.mockImplementation((url: unknown) => {
     if (url === "/api/tickets/agents") {
       return Promise.resolve({ data: agentsData })
+    }
+    if (typeof url === "string" && url.endsWith("/replies")) {
+      return Promise.resolve({ data: repliesData })
     }
     return Promise.resolve({ data: ticket })
   })
@@ -70,6 +94,7 @@ describe("TicketDetail page", () => {
   beforeEach(() => {
     mockGet.mockReset()
     mockPatch.mockReset()
+    mockPost.mockReset()
   })
 
   it("shows skeleton placeholders while the request is pending", () => {
@@ -112,6 +137,16 @@ describe("TicketDetail page", () => {
     expect(await screen.findByText("Failed to load ticket")).toBeInTheDocument()
   })
 
+  it("links back to the tickets list", () => {
+    mockGet.mockReturnValue(deferred().promise as never)
+
+    renderTicketDetail()
+
+    expect(
+      screen.getByRole("link", { name: "← Back to Tickets" })
+    ).toHaveAttribute("href", "/tickets")
+  })
+
   it("shows Unassigned when no agent is assigned", async () => {
     mockGetByUrl({ ticket })
 
@@ -129,6 +164,7 @@ describe("TicketDetail page", () => {
     renderTicketDetail()
 
     await screen.findByText("Can't log in")
+    expect(await screen.findByText("Bob Agent")).toBeInTheDocument()
     expect(screen.getByRole("combobox", { name: "Assigned to" })).toHaveTextContent(
       "Bob Agent"
     )
@@ -213,5 +249,66 @@ describe("TicketDetail page", () => {
     await userEvent.click(await screen.findByRole("option", { name: "Uncategorized" }))
 
     expect(mockPatch).toHaveBeenCalledWith("/api/tickets/1", { category: null })
+  })
+
+  it("renders the reply thread", async () => {
+    mockGetByUrl({ ticket, replies })
+
+    renderTicketDetail()
+
+    expect(
+      await screen.findByText("Have you tried resetting your password?")
+    ).toBeInTheDocument()
+    expect(screen.getByText("Alice Agent")).toBeInTheDocument()
+  })
+
+  it("shows an empty state when there are no replies", async () => {
+    mockGetByUrl({ ticket, replies: [] })
+
+    renderTicketDetail()
+
+    expect(await screen.findByText("No replies yet.")).toBeInTheDocument()
+  })
+
+  it("submits a new reply and appends it to the thread", async () => {
+    mockGetByUrl({ ticket, replies: [] })
+    mockPost.mockResolvedValue({
+      data: {
+        id: "reply-2",
+        ticketId: "1",
+        authorId: "agent-2",
+        author: { id: "agent-2", name: "Bob Agent" },
+        body: "Thanks for reaching out.",
+        createdAt: "2024-01-17T00:00:00.000Z",
+      },
+    })
+
+    renderTicketDetail()
+    await screen.findByText("No replies yet.")
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Reply" }),
+      "Thanks for reaching out."
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Send Reply" }))
+
+    expect(mockPost).toHaveBeenCalledWith("/api/tickets/1/replies", {
+      body: "Thanks for reaching out.",
+    })
+    expect(
+      await screen.findByText("Thanks for reaching out.")
+    ).toBeInTheDocument()
+  })
+
+  it("shows a validation error when submitting an empty reply", async () => {
+    mockGetByUrl({ ticket, replies: [] })
+
+    renderTicketDetail()
+    await screen.findByText("No replies yet.")
+
+    await userEvent.click(screen.getByRole("button", { name: "Send Reply" }))
+
+    expect(await screen.findByText("Reply cannot be empty")).toBeInTheDocument()
+    expect(mockPost).not.toHaveBeenCalled()
   })
 })

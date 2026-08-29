@@ -109,3 +109,27 @@ export function updateTicket(id: string, data: TicketUpdate) {
     .patch<Ticket>(`/api/tickets/${id}`, data)
     .then((res) => res.data)
 }
+
+export type Reply = {
+  id: string
+  ticketId: string
+  authorId: string
+  author: Agent
+  body: string
+  createdAt: string
+}
+
+export const ticketRepliesQueryKey = (ticketId: string) =>
+  ["tickets", ticketId, "replies"] as const
+
+export function fetchReplies(ticketId: string) {
+  return api
+    .get<Reply[]>(`/api/tickets/${ticketId}/replies`)
+    .then((res) => res.data)
+}
+
+export function createReply(ticketId: string, body: string) {
+  return api
+    .post<Reply>(`/api/tickets/${ticketId}/replies`, { body })
+    .then((res) => res.data)
+}

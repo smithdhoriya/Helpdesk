@@ -8,6 +8,7 @@ vi.mock("../db", () => ({
   prisma: {
     user: { findMany: vi.fn(), findUnique: vi.fn() },
     ticket: { findUnique: vi.fn(), update: vi.fn() },
+    reply: { findMany: vi.fn(), create: vi.fn() },
   },
 }));
 
@@ -248,5 +249,102 @@ describe("PATCH /api/tickets/:id", () => {
     expect(res.status).toBe(400);
     expect(mockPrisma.ticket.findUnique).not.toHaveBeenCalled();
     expect(mockPrisma.ticket.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/tickets/:id/replies", () => {
+  it("returns the ticket's replies with authors, oldest first", async () => {
+    const replies = [
+      {
+        id: "reply-1",
+        ticketId: "ticket-1",
+        authorId: "agent-1",
+        body: "Have you tried resetting your password?",
+        createdAt: new Date("2024-01-16T00:00:00.000Z"),
+        author: { id: "agent-1", name: "Alice Agent" },
+      },
+    ];
+    mockPrisma.ticket.findUnique.mockResolvedValue(ticket as never);
+    mockPrisma.reply.findMany.mockResolvedValue(replies as never);
+
+    const res = await request(app).get("/api/tickets/ticket-1/replies");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].author).toEqual({ id: "agent-1", name: "Alice Agent" });
+    expect(mockPrisma.reply.findMany).toHaveBeenCalledWith({
+      where: { ticketId: "ticket-1" },
+      include: { author: { select: { id: true, name: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+  });
+
+  it("returns 404 when the ticket does not exist", async () => {
+    mockPrisma.ticket.findUnique.mockResolvedValue(null as never);
+
+    const res = await request(app).get("/api/tickets/missing/replies");
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Ticket not found" });
+    expect(mockPrisma.reply.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/tickets/:id/replies", () => {
+  it("creates a reply authored by the current user", async () => {
+    mockPrisma.ticket.findUnique.mockResolvedValue(ticket as never);
+    const created = {
+      id: "reply-1",
+      ticketId: "ticket-1",
+      authorId: "test-user",
+      body: "Thanks for reaching out.",
+      createdAt: new Date("2024-01-16T00:00:00.000Z"),
+      author: { id: "test-user", name: "Test User" },
+    };
+    mockPrisma.reply.create.mockResolvedValue(created as never);
+
+    const res = await request(app)
+      .post("/api/tickets/ticket-1/replies")
+      .send({ body: "Thanks for reaching out." });
+
+    expect(res.status).toBe(201);
+    expect(res.body.author).toEqual({ id: "test-user", name: "Test User" });
+    expect(mockPrisma.reply.create).toHaveBeenCalledWith({
+      data: {
+        ticketId: "ticket-1",
+        authorId: "test-user",
+        body: "Thanks for reaching out.",
+      },
+      include: { author: { select: { id: true, name: true } } },
+    });
+  });
+
+  it("returns 404 when the ticket does not exist", async () => {
+    mockPrisma.ticket.findUnique.mockResolvedValue(null as never);
+
+    const res = await request(app)
+      .post("/api/tickets/missing/replies")
+      .send({ body: "Hello" });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Ticket not found" });
+    expect(mockPrisma.reply.create).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for an empty reply body", async () => {
+    const res = await request(app)
+      .post("/api/tickets/ticket-1/replies")
+      .send({ body: "   " });
+
+    expect(res.status).toBe(400);
+    expect(mockPrisma.ticket.findUnique).not.toHaveBeenCalled();
+    expect(mockPrisma.reply.create).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when the body is missing", async () => {
+    const res = await request(app).post("/api/tickets/ticket-1/replies").send({});
+
+    expect(res.status).toBe(400);
+    expect(mockPrisma.reply.create).not.toHaveBeenCalled();
   });
 });

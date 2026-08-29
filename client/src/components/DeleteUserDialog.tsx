@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import axios from "axios"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -13,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { FieldError } from "@/components/ui/field"
+import { getApiErrorMessage } from "@/lib/api"
 import { deleteUser, usersQueryKey, type User } from "@/lib/users"
 
 interface DeleteUserDialogProps {
@@ -38,10 +38,7 @@ function DeleteUserDialog({ user, onOpenChange }: DeleteUserDialogProps) {
     try {
       await mutation.mutateAsync()
     } catch (err) {
-      const message = axios.isAxiosError(err)
-        ? (err.response?.data as { error?: string } | undefined)?.error
-        : undefined
-      setError(message ?? "Failed to delete user")
+      setError(getApiErrorMessage(err, "Failed to delete user"))
     }
   }
 

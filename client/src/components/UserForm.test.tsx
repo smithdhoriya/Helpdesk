@@ -7,7 +7,8 @@ import { renderWithQuery } from "@/test/render"
 import { UserRole } from "@/lib/users"
 import UserForm from "./UserForm"
 
-vi.mock("@/lib/api", () => ({
+vi.mock("@/lib/api", async (importActual) => ({
+  ...(await importActual<typeof import("@/lib/api")>()),
   api: { post: vi.fn(), patch: vi.fn() },
 }))
 

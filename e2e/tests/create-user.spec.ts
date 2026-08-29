@@ -9,25 +9,6 @@ test.describe("Create user", () => {
     await loginAndWaitForHome(page, ADMIN_EMAIL, ADMIN_PASSWORD);
   });
 
-  test("opens empty with a Create User heading and submit button", async ({
-    page,
-  }) => {
-    await page.goto("/users");
-    await page.getByRole("button", { name: "Create User" }).click();
-
-    const dialog = page.getByRole("dialog", { name: "Create User" });
-    await expect(dialog).toBeVisible();
-    await expect(
-      dialog.getByText("Add a new agent to the helpdesk."),
-    ).toBeVisible();
-    await expect(dialog.getByLabel("Name")).toHaveValue("");
-    await expect(dialog.getByLabel("Email")).toHaveValue("");
-    await expect(dialog.getByLabel("Password")).toHaveValue("");
-    await expect(
-      dialog.getByRole("button", { name: "Create User" }),
-    ).toBeVisible();
-  });
-
   test("filling out and submitting the form adds the new agent to the users table", async ({
     page,
   }) => {

@@ -1,11 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-import { API_URL } from "../support/config";
 import { loginAndWaitForHome } from "../support/auth";
 import { ADMIN_EMAIL, ADMIN_PASSWORD } from "../support/env";
 import { createTestTicket } from "../support/tickets";
 import { createTestUser } from "../support/users";
 
+// The PATCH contract (assign/unassign/status/category, plus 400 agent-not-found
+// and 404 ticket-not-found) is covered by server unit tests
+// (server/src/routes/tickets.test.ts), and the assign UI is covered by
+// TicketDetail.test.tsx against a mocked API. What only E2E proves is that the
+// assignment actually persists through the real DB and re-reads on reload.
 test.describe("Assign a ticket to an agent", () => {
   test.beforeEach(async ({ page }) => {
     // Assigning isn't admin-gated (any authenticated user can PATCH a
@@ -58,27 +62,5 @@ test.describe("Assign a ticket to an agent", () => {
     await expect(
       page.getByRole("combobox", { name: "Assigned to" }),
     ).toContainText("Unassigned");
-  });
-
-  test("PATCH with a nonexistent agent id returns 400", async ({ page }) => {
-    const ticket = await createTestTicket(page);
-
-    const response = await page.request.patch(
-      `${API_URL}/api/tickets/${ticket.id}`,
-      { data: { assignedTo: "not-a-real-agent-id" } },
-    );
-
-    expect(response.status()).toBe(400);
-    expect(await response.json()).toEqual({ error: "Agent not found" });
-  });
-
-  test("PATCH on a nonexistent ticket returns 404", async ({ page }) => {
-    const response = await page.request.patch(
-      `${API_URL}/api/tickets/not-a-real-ticket-id`,
-      { data: { assignedTo: null } },
-    );
-
-    expect(response.status()).toBe(404);
-    expect(await response.json()).toEqual({ error: "Ticket not found" });
   });
 });
