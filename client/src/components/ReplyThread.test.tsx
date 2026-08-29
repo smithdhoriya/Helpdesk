@@ -27,6 +27,7 @@ const ticket: Ticket = {
   id: "ticket-1",
   subject: "Can't log in",
   body: "I forgot my password.",
+  bodyHtml: null,
   senderEmail: "customer@example.com",
   status: TicketStatus.open,
   category: TicketCategory.technicalQuestion,

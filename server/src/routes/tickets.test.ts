@@ -37,6 +37,7 @@ const ticket = {
   id: "ticket-1",
   subject: "Can't log in",
   body: "I forgot my password.",
+  bodyHtml: "<p>I forgot my password.</p>",
   senderEmail: "customer@example.com",
   status: "open",
   category: "technicalQuestion",
@@ -84,10 +85,22 @@ describe("GET /api/tickets/:id", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.assignee).toEqual({ id: "agent-1", name: "Alice Agent" });
+    expect(res.body.bodyHtml).toBe("<p>I forgot my password.</p>");
     expect(mockPrisma.ticket.findUnique).toHaveBeenCalledWith({
       where: { id: "ticket-1" },
       include: { assignee: { select: { id: true, name: true } } },
     });
+  });
+
+  it("returns a null bodyHtml for a plain-text-only ticket", async () => {
+    mockPrisma.ticket.findUnique.mockResolvedValue(
+      { ...ticket, bodyHtml: null } as never,
+    );
+
+    const res = await request(app).get("/api/tickets/ticket-1");
+
+    expect(res.status).toBe(200);
+    expect(res.body.bodyHtml).toBeNull();
   });
 
   it("returns 404 when the ticket does not exist", async () => {

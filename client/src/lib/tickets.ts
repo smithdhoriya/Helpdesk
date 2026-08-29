@@ -32,6 +32,7 @@ export type Ticket = {
   id: string
   subject: string
   body: string
+  bodyHtml: string | null
   senderEmail: string
   status: TicketStatus
   category: TicketCategory | null

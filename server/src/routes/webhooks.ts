@@ -22,6 +22,10 @@ const inboundEmailSchema = z.object({
   to: z.string().email(),
   subject: z.string().trim().min(1, "Subject is required"),
   body: z.string(),
+  // Optional HTML part of the email. `nullish` (rather than `optional`)
+  // because providers commonly send an explicit `null` for plain-text-only
+  // mail, and that shouldn't reject the whole ticket.
+  bodyHtml: z.string().nullish(),
   messageId: z.string().optional(),
 });
 
@@ -33,7 +37,7 @@ webhooksRouter.post("/inbound-email", requireWebhookSecret, async (req, res) => 
     return;
   }
 
-  const { from, subject, body, messageId } = parsed.data;
+  const { from, subject, body, bodyHtml, messageId } = parsed.data;
 
   if (messageId) {
     const existing = await prisma.ticket.findUnique({
@@ -49,6 +53,7 @@ webhooksRouter.post("/inbound-email", requireWebhookSecret, async (req, res) => 
     data: {
       subject,
       body,
+      bodyHtml: bodyHtml ?? null,
       senderEmail: from,
       sourceMessageId: messageId ?? null,
     },

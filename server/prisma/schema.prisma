@@ -47,6 +47,7 @@ model Ticket {
   id              String          @id @default(uuid())
   subject         String
   body            String
+  bodyHtml        String?
   senderEmail     String
   status          TicketStatus    @default(open)
   category        TicketCategory?
