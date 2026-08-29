@@ -138,6 +138,15 @@ usersRouter.delete("/:id", async (req, res) => {
   await prisma.$transaction([
     prisma.user.update({ where: { id }, data: { deletedAt: new Date() } }),
     prisma.session.deleteMany({ where: { userId: id } }),
+    // A deleted user is no longer assignable (they're filtered out of
+    // GET /api/tickets/agents), so anything still assigned to them would be
+    // stranded: it would keep showing their name with no way to reassign it
+    // through the picker. Release that work back to the unassigned pool in the
+    // same transaction, so a ticket is never left pointing at a deleted user.
+    prisma.ticket.updateMany({
+      where: { assignedTo: id },
+      data: { assignedTo: null },
+    }),
   ]);
 
   res.status(204).send();
