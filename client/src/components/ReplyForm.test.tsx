@@ -163,6 +163,23 @@ describe("ReplyForm", () => {
     expect(getSubmit()).toBeEnabled()
   })
 
+  it("re-disables Send after a successful submit clears the draft", async () => {
+    const user = userEvent.setup()
+    mockPost.mockResolvedValue({ data: createdReply })
+
+    renderWithQuery(<ReplyForm ticket={ticket} />)
+
+    await user.type(getTextarea(), "Thanks for reaching out.")
+    expect(getSubmit()).toBeEnabled()
+
+    await user.click(getSubmit())
+
+    // The reset() on success empties the textarea, so Send goes back to disabled
+    // without the agent having to clear it themselves.
+    await waitFor(() => expect(getTextarea()).toHaveValue(""))
+    expect(getSubmit()).toBeDisabled()
+  })
+
   it("shows the server's error message when the request fails", async () => {
     const user = userEvent.setup()
     mockPost.mockRejectedValue({
@@ -283,6 +300,18 @@ describe("ReplyForm — Polish", () => {
 
     expect(screen.queryByText("Reply cannot be empty")).not.toBeInTheDocument()
     expect(mockPost).not.toHaveBeenCalled()
+  })
+
+  it("enables Polish once the draft has content", async () => {
+    const user = userEvent.setup()
+
+    renderWithQuery(<ReplyForm ticket={ticket} />)
+
+    expect(getPolish()).toBeDisabled()
+
+    await user.type(getTextarea(), "cant reset you're password")
+
+    expect(getPolish()).toBeEnabled()
   })
 
   it("keeps the draft and shows the server error when polishing fails", async () => {
