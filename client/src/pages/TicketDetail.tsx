@@ -7,6 +7,7 @@ import ReplyForm from "@/components/ReplyForm"
 import ReplyThread from "@/components/ReplyThread"
 import { Skeleton } from "@/components/ui/skeleton"
 import TicketMessage from "@/components/TicketMessage"
+import TicketSummary from "@/components/TicketSummary"
 import UpdateTicket from "@/components/UpdateTicket"
 import { fetchTicket, ticketQueryKey } from "@/lib/tickets"
 
@@ -42,6 +43,8 @@ function TicketDetail() {
         <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
           <div className="space-y-6 md:col-span-2">
             <TicketMessage ticket={ticket} />
+
+            <TicketSummary ticket={ticket} />
 
             <Card>
               <CardHeader>

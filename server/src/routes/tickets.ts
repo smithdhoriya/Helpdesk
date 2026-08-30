@@ -5,6 +5,7 @@ import { prisma } from "../db";
 import { Prisma } from "../generated/client/client";
 import { TicketCategory, TicketStatus } from "../generated/client/enums";
 import { polishFailureReason, polishModel, polishReply } from "../lib/polish-reply";
+import { summarizeTicket, summaryFailureReason, summaryModel } from "../lib/summarize-ticket";
 import { sendValidationError } from "../lib/validation";
 
 export const ticketsRouter = Router();
@@ -229,5 +230,58 @@ ticketsRouter.post("/:id/replies/polish", async (req, res) => {
     // Anything else is transient from the agent's point of view: keep their
     // draft and let them retry or send it as-is.
     res.status(502).json({ error: "Failed to polish reply" });
+  }
+});
+
+// Generates a fresh summary of the ticket and its reply thread on every call —
+// nothing is persisted, so the summary always reflects the latest conversation.
+ticketsRouter.post("/:id/summarize", async (req, res) => {
+  const { id } = req.params;
+
+  const ticket = await prisma.ticket.findUnique({ where: { id } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const replies = await prisma.reply.findMany({
+    where: { ticketId: id },
+    include: { author: { select: replyAuthorSelect } },
+    orderBy: { createdAt: "asc" },
+  });
+
+  try {
+    const summary = await summarizeTicket({
+      subject: ticket.subject,
+      body: ticket.body,
+      replies: replies.map((reply) => ({ author: reply.author.name, body: reply.body })),
+    });
+    res.json({ summary });
+  } catch (error) {
+    const reason = summaryFailureReason(error);
+
+    // The provider's own message is the only place the real cause shows up
+    // (daemon not running, model never pulled, an empty completion), so log it
+    // alongside the classification.
+    console.error(`Failed to summarize ticket (${reason})`, error);
+
+    // Both of these are operator problems a retry won't fix, and a bare "Failed
+    // to summarize ticket" tells the agent nothing about which side is broken.
+    if (reason === "unreachable") {
+      res.status(503).json({
+        error: "Ticket summarization is unavailable (cannot reach the local AI service)",
+      });
+      return;
+    }
+
+    if (reason === "modelMissing") {
+      res.status(503).json({
+        error: `Ticket summarization is unavailable (the "${summaryModel}" model is not installed)`,
+      });
+      return;
+    }
+
+    // Anything else is transient: let the agent retry.
+    res.status(502).json({ error: "Failed to summarize ticket" });
   }
 });

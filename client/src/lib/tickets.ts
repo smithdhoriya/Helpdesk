@@ -141,3 +141,13 @@ export function polishReply(ticketId: string, body: string) {
     .post<{ body: string }>(`/api/tickets/${ticketId}/replies/polish`, { body })
     .then((res) => res.data.body)
 }
+
+/**
+ * Asks the server for a fresh AI summary of the ticket and its conversation.
+ * Regenerated on every call — nothing is cached or persisted.
+ */
+export function summarizeTicket(ticketId: string) {
+  return api
+    .post<{ summary: string }>(`/api/tickets/${ticketId}/summarize`)
+    .then((res) => res.data.summary)
+}

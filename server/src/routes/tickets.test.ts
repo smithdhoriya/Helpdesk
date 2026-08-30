@@ -39,12 +39,21 @@ vi.mock("../lib/polish-reply", async (importActual) => ({
   polishReply: vi.fn(),
 }));
 
+// Same treatment for the summarizer: stub the model call, keep the real
+// `summaryFailureReason` so the route's error classification is exercised.
+vi.mock("../lib/summarize-ticket", async (importActual) => ({
+  ...(await importActual<typeof import("../lib/summarize-ticket")>()),
+  summarizeTicket: vi.fn(),
+}));
+
 import { app } from "../app";
 import { prisma } from "../db";
 import { polishModel, polishReply } from "../lib/polish-reply";
+import { summarizeTicket, summaryModel } from "../lib/summarize-ticket";
 
 const mockPrisma = vi.mocked(prisma, true);
 const mockPolishReply = vi.mocked(polishReply);
+const mockSummarizeTicket = vi.mocked(summarizeTicket);
 
 const ticket = {
   id: "ticket-1",
@@ -584,6 +593,152 @@ describe("POST /api/tickets/:id/replies/polish", () => {
     expect(res.status).toBe(503);
     // Naming the model is what makes the error actionable (`ollama pull <model>`).
     expect(res.body.error).toContain(polishModel);
+    expect(res.body.error).toContain("not installed");
+  });
+});
+
+describe("POST /api/tickets/:id/summarize", () => {
+  const replies = [
+    {
+      id: "reply-1",
+      ticketId: "ticket-1",
+      authorId: "agent-1",
+      body: "Have you tried resetting your password?",
+      createdAt: new Date("2024-01-16T00:00:00.000Z"),
+      author: { id: "agent-1", name: "Alice Agent" },
+    },
+  ];
+
+  function postSummarize() {
+    return request(app).post("/api/tickets/ticket-1/summarize").send();
+  }
+
+  it("returns a freshly generated summary of the ticket and its replies", async () => {
+    mockPrisma.ticket.findUnique.mockResolvedValue(ticket as never);
+    mockPrisma.reply.findMany.mockResolvedValue(replies as never);
+    mockSummarizeTicket.mockResolvedValue("Customer can't log in; agent suggested a reset.");
+
+    const res = await postSummarize();
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ summary: "Customer can't log in; agent suggested a reset." });
+    // The ticket subject/body and each reply (by author name, oldest first) are
+    // handed to the summarizer — this is the one AI path that *is* given ticket
+    // context, unlike polishing.
+    expect(mockSummarizeTicket).toHaveBeenCalledWith({
+      subject: ticket.subject,
+      body: ticket.body,
+      replies: [{ author: "Alice Agent", body: "Have you tried resetting your password?" }],
+    });
+  });
+
+  it("reads the replies oldest-first", async () => {
+    mockPrisma.ticket.findUnique.mockResolvedValue(ticket as never);
+    mockPrisma.reply.findMany.mockResolvedValue(replies as never);
+    mockSummarizeTicket.mockResolvedValue("Summary.");
+
+    await postSummarize();
+
+    expect(mockPrisma.reply.findMany).toHaveBeenCalledWith({
+      where: { ticketId: "ticket-1" },
+      include: { author: { select: { id: true, name: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+  });
+
+  it("summarizes a ticket with no replies", async () => {
+    mockPrisma.ticket.findUnique.mockResolvedValue(ticket as never);
+    mockPrisma.reply.findMany.mockResolvedValue([] as never);
+    mockSummarizeTicket.mockResolvedValue("Customer can't log in.");
+
+    const res = await postSummarize();
+
+    expect(res.status).toBe(200);
+    expect(mockSummarizeTicket).toHaveBeenCalledWith({
+      subject: ticket.subject,
+      body: ticket.body,
+      replies: [],
+    });
+  });
+
+  it("does not persist anything", async () => {
+    mockPrisma.ticket.findUnique.mockResolvedValue(ticket as never);
+    mockPrisma.reply.findMany.mockResolvedValue(replies as never);
+    mockSummarizeTicket.mockResolvedValue("Summary.");
+
+    await postSummarize();
+
+    expect(mockPrisma.reply.create).not.toHaveBeenCalled();
+    expect(mockPrisma.ticket.update).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when the ticket does not exist", async () => {
+    mockPrisma.ticket.findUnique.mockResolvedValue(null as never);
+
+    const res = await request(app).post("/api/tickets/missing/summarize").send();
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Ticket not found" });
+    expect(mockPrisma.reply.findMany).not.toHaveBeenCalled();
+    expect(mockSummarizeTicket).not.toHaveBeenCalled();
+  });
+
+  it("returns 502 when the model call fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mockPrisma.ticket.findUnique.mockResolvedValue(ticket as never);
+    mockPrisma.reply.findMany.mockResolvedValue(replies as never);
+    mockSummarizeTicket.mockRejectedValue(new Error("rate limited"));
+
+    const res = await postSummarize();
+
+    expect(res.status).toBe(502);
+    expect(res.body).toEqual({ error: "Failed to summarize ticket" });
+    expect(JSON.stringify(res.body)).not.toContain("rate limited");
+  });
+
+  it("returns 503 when the local AI service is not reachable", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mockPrisma.ticket.findUnique.mockResolvedValue(ticket as never);
+    mockPrisma.reply.findMany.mockResolvedValue(replies as never);
+    mockSummarizeTicket.mockRejectedValue(
+      new RetryError({
+        message: "Failed after 2 attempts",
+        reason: "maxRetriesExceeded",
+        errors: [
+          new APICallError({
+            message: "Cannot connect to API: connect ECONNREFUSED 127.0.0.1:11434",
+            url: "http://127.0.0.1:11434/api/chat",
+            requestBodyValues: {},
+            isRetryable: true,
+          }),
+        ],
+      }),
+    );
+
+    const res = await postSummarize();
+
+    expect(res.status).toBe(503);
+    expect(res.body.error).toContain("cannot reach the local AI service");
+    expect(JSON.stringify(res.body)).not.toContain("ECONNREFUSED");
+  });
+
+  it("returns 503 naming the model when it has not been pulled", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mockPrisma.ticket.findUnique.mockResolvedValue(ticket as never);
+    mockPrisma.reply.findMany.mockResolvedValue(replies as never);
+    mockSummarizeTicket.mockRejectedValue(
+      new APICallError({
+        message: `model "${summaryModel}" not found, try pulling it first`,
+        url: "http://127.0.0.1:11434/api/chat",
+        requestBodyValues: {},
+        statusCode: 404,
+      }),
+    );
+
+    const res = await postSummarize();
+
+    expect(res.status).toBe(503);
+    expect(res.body.error).toContain(summaryModel);
     expect(res.body.error).toContain("not installed");
   });
 });

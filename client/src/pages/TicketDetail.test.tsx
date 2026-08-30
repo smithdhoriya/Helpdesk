@@ -301,15 +301,21 @@ describe("TicketDetail page", () => {
     ).toBeInTheDocument()
   })
 
-  it("shows a validation error when submitting an empty reply", async () => {
+  it("disables Send for an empty reply instead of showing a validation error", async () => {
     mockGetByUrl({ ticket, replies: [] })
 
     renderTicketDetail()
     await screen.findByText("No replies yet.")
 
-    await userEvent.click(screen.getByRole("button", { name: "Send Reply" }))
+    // An empty draft leaves Send disabled and surfaces no validation error;
+    // clicking it does nothing (the detailed behavior is covered in ReplyForm's
+    // own component test).
+    const send = screen.getByRole("button", { name: "Send Reply" })
+    expect(send).toBeDisabled()
 
-    expect(await screen.findByText("Reply cannot be empty")).toBeInTheDocument()
+    await userEvent.click(send)
+
+    expect(screen.queryByText("Reply cannot be empty")).not.toBeInTheDocument()
     expect(mockPost).not.toHaveBeenCalled()
   })
 })
