@@ -134,3 +134,10 @@ export function createReply(ticketId: string, body: string) {
     .post<Reply>(`/api/tickets/${ticketId}/replies`, { body })
     .then((res) => res.data)
 }
+
+/** Sends a draft reply to the server for an AI rewrite. Persists nothing. */
+export function polishReply(ticketId: string, body: string) {
+  return api
+    .post<{ body: string }>(`/api/tickets/${ticketId}/replies/polish`, { body })
+    .then((res) => res.data.body)
+}

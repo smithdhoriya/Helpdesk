@@ -49,6 +49,7 @@ model Ticket {
   body            String
   bodyHtml        String?
   senderEmail     String
+  senderName      String?
   status          TicketStatus    @default(open)
   category        TicketCategory?
   assignedTo      String?

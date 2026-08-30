@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "../db";
 import { Prisma } from "../generated/client/client";
 import { TicketCategory, TicketStatus } from "../generated/client/enums";
+import { polishFailureReason, polishModel, polishReply } from "../lib/polish-reply";
 import { sendValidationError } from "../lib/validation";
 
 export const ticketsRouter = Router();
@@ -167,4 +168,66 @@ ticketsRouter.post("/:id/replies", async (req, res) => {
   });
 
   res.status(201).json(reply);
+});
+
+// Rewrites a draft reply without persisting anything — the polished text goes
+// back to the agent's textarea for them to edit and send (or discard).
+ticketsRouter.post("/:id/replies/polish", async (req, res) => {
+  const parsed = createReplySchema.safeParse(req.body);
+  if (!parsed.success) {
+    sendValidationError(res, parsed.error);
+    return;
+  }
+
+  const { id } = req.params;
+
+  const ticket = await prisma.ticket.findUnique({ where: { id } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  try {
+    // Only the agent's draft is polished — the ticket is loaded here purely for
+    // the 404 check above and the customer's stored name, never fed to the
+    // model, so a short draft stays a short reply instead of being rewritten
+    // from the ticket. The polished reply is addressed to the customer using
+    // their real name (`senderName`, captured at ingestion) and signed off with
+    // the authenticated agent's name. When no name was captured, an empty string
+    // is passed so the reply still opens with a generic "Dear Customer," — a
+    // name is never invented from the email address or the draft.
+    const body = await polishReply(parsed.data.body, {
+      customerName: ticket.senderName ?? "",
+      agentName: req.user!.name,
+    });
+    res.json({ body });
+  } catch (error) {
+    const reason = polishFailureReason(error);
+
+    // The provider's own message is the only place the real cause shows up
+    // (daemon not running, model never pulled, an empty completion), so log it
+    // alongside the classification.
+    console.error(`Failed to polish reply (${reason})`, error);
+
+    // Both of these are operator problems that a retry won't fix, and a bare
+    // "Failed to polish reply" tells the agent nothing about which side is
+    // broken or who can fix it.
+    if (reason === "unreachable") {
+      res.status(503).json({
+        error: "Reply polishing is unavailable (cannot reach the local AI service)",
+      });
+      return;
+    }
+
+    if (reason === "modelMissing") {
+      res.status(503).json({
+        error: `Reply polishing is unavailable (the "${polishModel}" model is not installed)`,
+      });
+      return;
+    }
+
+    // Anything else is transient from the agent's point of view: keep their
+    // draft and let them retry or send it as-is.
+    res.status(502).json({ error: "Failed to polish reply" });
+  }
 });

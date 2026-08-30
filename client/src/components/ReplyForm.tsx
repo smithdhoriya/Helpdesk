@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { Controller, useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { getApiErrorMessage } from "@/lib/api"
 import {
   createReply,
+  polishReply,
   ticketRepliesQueryKey,
   type Reply,
   type Ticket,
@@ -31,8 +32,10 @@ function ReplyForm({ ticket }: ReplyFormProps) {
 
   const {
     control,
+    getValues,
     handleSubmit,
     reset,
+    setValue,
     formState: { isSubmitting },
   } = useForm<ReplyFormValues>({
     resolver: zodResolver(replySchema),
@@ -49,6 +52,23 @@ function ReplyForm({ ticket }: ReplyFormProps) {
     },
   })
 
+  const polishMutation = useMutation({
+    mutationFn: (body: string) => polishReply(ticket.id, body),
+  })
+
+  // Both actions write to the same textarea, so neither runs while the other is
+  // in flight.
+  const isBusy = isSubmitting || polishMutation.isPending
+
+  // Gate both actions on there being a non-empty draft rather than letting an
+  // empty submit through to surface a "Reply cannot be empty" error: an empty
+  // reply is nothing to send and nothing to polish, so the buttons are simply
+  // disabled until the agent types something. `.trim()` mirrors the schema so
+  // whitespace-only input counts as empty too.
+  const draft = useWatch({ control, name: "body" })
+  const isEmpty = (draft ?? "").trim().length === 0
+  const isDisabled = isBusy || isEmpty
+
   async function onSubmit(data: ReplyFormValues) {
     setError(null)
 
@@ -57,6 +77,18 @@ function ReplyForm({ ticket }: ReplyFormProps) {
       reset()
     } catch (err) {
       setError(getApiErrorMessage(err, "Failed to send reply"))
+    }
+  }
+
+  async function onPolish() {
+    setError(null)
+
+    try {
+      const polished = await polishMutation.mutateAsync(getValues("body"))
+      setValue("body", polished, { shouldDirty: true })
+    } catch (err) {
+      // The draft is left untouched so a failed polish can't lose the agent's work.
+      setError(getApiErrorMessage(err, "Failed to polish reply"))
     }
   }
 
@@ -81,8 +113,16 @@ function ReplyForm({ ticket }: ReplyFormProps) {
 
       {error && <FieldError>{error}</FieldError>}
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={isSubmitting}>
+      <div className="flex justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onPolish}
+          disabled={isDisabled}
+        >
+          {polishMutation.isPending ? "Polishing..." : "Polish"}
+        </Button>
+        <Button type="submit" disabled={isDisabled}>
           {isSubmitting ? "Sending..." : "Send Reply"}
         </Button>
       </div>

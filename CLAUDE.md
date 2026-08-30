@@ -8,7 +8,7 @@ tickets, and suggest replies — reducing manual work for support agents.
 - **Frontend**: React + TypeScript, Tailwind CSS, shadcn/ui, React Router, axios + TanStack Query for data fetching
 - **Backend**: Node.js + Express + TypeScript (Bun runtime)
 - **Database**: PostgreSQL + Prisma
-- **AI**: Claude API (Anthropic)
+- **AI**: Ollama running a local model, via the Vercel AI SDK (`ai` + `ollama-ai-provider-v2`) — free and offline, no API key. Currently used for reply polishing only (`server/src/lib/polish-reply.ts`); model and daemon URL come from `OLLAMA_MODEL` / `OLLAMA_BASE_URL`.
 - **Authentication**: Better Auth, email/password with database-backed sessions (via Prisma)
 - **Testing**: Vitest + React Testing Library (component tests), Playwright (E2E)
 - **Validation**: Zod, on both client and server (see Key Conventions)

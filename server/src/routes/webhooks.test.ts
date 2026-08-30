@@ -44,6 +44,7 @@ const created = {
   body: payload.body,
   bodyHtml: null as string | null,
   senderEmail: payload.from,
+  senderName: null as string | null,
   status: "open",
   category: null,
   assignedTo: null,
@@ -79,6 +80,7 @@ describe("POST /api/webhooks/inbound-email — bodyHtml", () => {
         body: payload.body,
         bodyHtml,
         senderEmail: payload.from,
+        senderName: null,
         sourceMessageId: payload.messageId,
       },
     });
@@ -122,6 +124,71 @@ describe("POST /api/webhooks/inbound-email — bodyHtml", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.bodyHtml).toBe("<p>original</p>");
+    expect(mockPrisma.ticket.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/webhooks/inbound-email — sender name", () => {
+  it("stores null when `from` is a bare address and no name is given", async () => {
+    mockPrisma.ticket.create.mockResolvedValue(created as never);
+
+    await postInboundEmail(payload);
+
+    expect(mockPrisma.ticket.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        senderEmail: "customer@example.com",
+        senderName: null,
+      }),
+    });
+  });
+
+  it("parses the display name out of a `Name <email>` from header", async () => {
+    mockPrisma.ticket.create.mockResolvedValue(created as never);
+
+    await postInboundEmail({ ...payload, from: "Alice Johnson <alice@example.com>" });
+
+    expect(mockPrisma.ticket.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        senderEmail: "alice@example.com",
+        senderName: "Alice Johnson",
+      }),
+    });
+  });
+
+  it("strips surrounding quotes from a quoted display name", async () => {
+    mockPrisma.ticket.create.mockResolvedValue(created as never);
+
+    await postInboundEmail({ ...payload, from: '"Alice Johnson" <alice@example.com>' });
+
+    expect(mockPrisma.ticket.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        senderEmail: "alice@example.com",
+        senderName: "Alice Johnson",
+      }),
+    });
+  });
+
+  it("prefers an explicit `fromName` over a name in the header", async () => {
+    mockPrisma.ticket.create.mockResolvedValue(created as never);
+
+    await postInboundEmail({
+      ...payload,
+      from: "Bot <alice@example.com>",
+      fromName: "Alice Johnson",
+    });
+
+    expect(mockPrisma.ticket.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        senderEmail: "alice@example.com",
+        senderName: "Alice Johnson",
+      }),
+    });
+  });
+
+  it("returns 400 when the extracted address is not a valid email", async () => {
+    const res = await postInboundEmail({ ...payload, from: "not-an-email" });
+
+    expect(res.status).toBe(400);
     expect(mockPrisma.ticket.create).not.toHaveBeenCalled();
   });
 });
