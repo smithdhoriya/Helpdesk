@@ -5,6 +5,7 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
 import { requireAdmin } from "./middleware/require-admin";
 import { requireAuth } from "./middleware/require-auth";
+import { dashboardRouter } from "./routes/dashboard";
 import { ticketsRouter } from "./routes/tickets";
 import { usersRouter } from "./routes/users";
 import { webhooksRouter } from "./routes/webhooks";
@@ -24,4 +25,5 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/users", requireAuth, requireAdmin, usersRouter);
 app.use("/api/webhooks", webhooksRouter);
+app.use("/api/dashboard", requireAuth, dashboardRouter);
 app.use("/api/tickets", requireAuth, ticketsRouter);

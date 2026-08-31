@@ -18,8 +18,15 @@ vi.mock("../lib/auto-resolve-ticket", async (importActual) => ({
   loadKnowledgeBase: vi.fn(() => "KNOWLEDGE BASE TEXT"),
 }));
 
+// The AI agent id the worker assigns a processing ticket to. Stubbed so the test
+// needs no seeded user; a real lookup lives in `ai-agent.test.ts`.
+vi.mock("../lib/ai-agent", () => ({
+  getAiAgentId: vi.fn(async () => "ai-agent-id"),
+}));
+
 import { prisma } from "../db";
 import { TicketStatus } from "../generated/client/enums";
+import { getAiAgentId } from "../lib/ai-agent";
 import { autoResolveTicket, loadKnowledgeBase } from "../lib/auto-resolve-ticket";
 import {
   autoResolveAndSaveTicket,
@@ -30,6 +37,7 @@ import { AUTO_RESOLVE_TICKET_QUEUE } from "./index";
 const mockPrisma = vi.mocked(prisma, true);
 const mockAutoResolve = vi.mocked(autoResolveTicket);
 const mockLoadKb = vi.mocked(loadKnowledgeBase);
+const mockGetAiAgentId = vi.mocked(getAiAgentId);
 
 const newTicket = {
   subject: "How do I reset my password?",
@@ -58,11 +66,13 @@ describe("autoResolveAndSaveTicket", () => {
     );
     expect(mockLoadKb).toHaveBeenCalled();
 
-    // A `new` ticket is first flipped to `processing` while the model decides.
+    // A `new` ticket is first flipped to `processing` and assigned to the AI
+    // agent while the model decides.
     expect(mockPrisma.ticket.update).toHaveBeenCalledWith({
       where: { id: "ticket-1" },
-      data: { status: TicketStatus.processing },
+      data: { status: TicketStatus.processing, assignedTo: "ai-agent-id" },
     });
+    expect(mockGetAiAgentId).toHaveBeenCalled();
 
     // Reply + resolved status update are written together via $transaction.
     expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
@@ -87,7 +97,7 @@ describe("autoResolveAndSaveTicket", () => {
     // status update is the final resolved transition.
     expect(mockPrisma.ticket.update).not.toHaveBeenCalledWith({
       where: { id: "ticket-1" },
-      data: { status: TicketStatus.processing },
+      data: { status: TicketStatus.processing, assignedTo: "ai-agent-id" },
     });
     expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
   });
@@ -99,16 +109,17 @@ describe("autoResolveAndSaveTicket", () => {
     await autoResolveAndSaveTicket("ticket-1");
 
     // No reply is posted and nothing is written transactionally; the ticket is
-    // simply left open (with no reply) for a human.
+    // simply left open (with no reply) and unassigned from the AI agent for a
+    // human to pick up.
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     expect(mockPrisma.reply.create).not.toHaveBeenCalled();
     expect(mockPrisma.ticket.update).toHaveBeenCalledWith({
       where: { id: "ticket-1" },
-      data: { status: TicketStatus.processing },
+      data: { status: TicketStatus.processing, assignedTo: "ai-agent-id" },
     });
     expect(mockPrisma.ticket.update).toHaveBeenCalledWith({
       where: { id: "ticket-1" },
-      data: { status: TicketStatus.open },
+      data: { status: TicketStatus.open, assignedTo: null },
     });
   });
 
@@ -173,14 +184,15 @@ describe("autoResolveAndSaveTicket", () => {
     // throwing back to pg-boss.
     await expect(autoResolveAndSaveTicket("ticket-1")).resolves.toBeUndefined();
 
-    // The ticket first moved to processing, then the failure routed it to open.
+    // The ticket first moved to processing (assigned to the AI agent), then the
+    // failure routed it to open and unassigned it.
     expect(mockPrisma.ticket.update).toHaveBeenCalledWith({
       where: { id: "ticket-1" },
-      data: { status: TicketStatus.processing },
+      data: { status: TicketStatus.processing, assignedTo: "ai-agent-id" },
     });
     expect(mockPrisma.ticket.update).toHaveBeenCalledWith({
       where: { id: "ticket-1" },
-      data: { status: TicketStatus.open },
+      data: { status: TicketStatus.open, assignedTo: null },
     });
     // No reply is posted and nothing is committed transactionally.
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
@@ -189,6 +201,21 @@ describe("autoResolveAndSaveTicket", () => {
     expect(error).toHaveBeenCalled();
 
     error.mockRestore();
+  });
+
+  it("assigns nothing on the processing transition when the AI agent hasn't been seeded", async () => {
+    mockGetAiAgentId.mockResolvedValueOnce(null);
+    mockPrisma.ticket.findUnique.mockResolvedValue(newTicket as never);
+    mockAutoResolve.mockResolvedValue({ canResolve: true, reply: "Hi Alice,\n\nReset it." });
+
+    await autoResolveAndSaveTicket("ticket-1");
+
+    // Best-effort assignment: with no AI agent to assign to, the ticket still
+    // moves to `processing`, just without an assignee.
+    expect(mockPrisma.ticket.update).toHaveBeenCalledWith({
+      where: { id: "ticket-1" },
+      data: { status: TicketStatus.processing },
+    });
   });
 });
 

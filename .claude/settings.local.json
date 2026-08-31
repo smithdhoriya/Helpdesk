@@ -129,7 +129,8 @@
       "Bash(timeout 180 bunx --bun shadcn@latest add checkbox)",
       "Bash(echo \"EXIT:$?\")",
       "Bash(grep -v \"^$\")",
-      "Bash(echo \"TYPECHECK_EXIT:$?\")"
+      "Bash(echo \"TYPECHECK_EXIT:$?\")",
+      "Bash(echo \"CLIENT_TSC_EXIT=$?\")"
     ]
   }
 }
