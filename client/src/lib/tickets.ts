@@ -1,6 +1,8 @@
 import { api } from "@/lib/api"
 
 export const TicketStatus = {
+  new: "new",
+  processing: "processing",
   open: "open",
   resolved: "resolved",
   closed: "closed",
@@ -9,6 +11,8 @@ export const TicketStatus = {
 export type TicketStatus = (typeof TicketStatus)[keyof typeof TicketStatus]
 
 export const ticketStatusLabels: Record<TicketStatus, string> = {
+  [TicketStatus.new]: "New",
+  [TicketStatus.processing]: "Processing",
   [TicketStatus.open]: "Open",
   [TicketStatus.resolved]: "Resolved",
   [TicketStatus.closed]: "Closed",
@@ -36,6 +40,7 @@ export type Ticket = {
   senderEmail: string
   status: TicketStatus
   category: TicketCategory | null
+  resolvedByAi: boolean
   assignedTo: string | null
   assignee?: Agent | null
   createdAt: string
@@ -66,6 +71,9 @@ export interface TicketsFilters {
   status?: TicketStatus
   category?: TicketCategory | "uncategorized"
   search?: string
+  // Opt in to showing tickets the AI resolved from the knowledge base, which are
+  // hidden from the list by default.
+  resolvedByAi?: boolean
 }
 
 export interface TicketsPagination {
@@ -114,8 +122,11 @@ export function updateTicket(id: string, data: TicketUpdate) {
 export type Reply = {
   id: string
   ticketId: string
-  authorId: string
-  author: Agent
+  // Null for AI-authored replies (auto-resolutions); a human agent's reply
+  // always carries both fields.
+  authorId: string | null
+  author: Agent | null
+  isAi: boolean
   body: string
   createdAt: string
 }

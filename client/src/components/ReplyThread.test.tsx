@@ -31,6 +31,7 @@ const ticket: Ticket = {
   senderEmail: "customer@example.com",
   status: TicketStatus.open,
   category: TicketCategory.technicalQuestion,
+  resolvedByAi: false,
   assignedTo: null,
   createdAt: "2024-01-15T00:00:00.000Z",
   updatedAt: "2024-01-15T00:00:00.000Z",
@@ -43,6 +44,7 @@ const replies = [
     authorId: "agent-1",
     author: { id: "agent-1", name: "Alice Agent" },
     body: "Have you tried resetting your password?",
+    isAi: false,
     createdAt: "2024-01-16T09:30:00.000Z",
   },
   {
@@ -51,9 +53,20 @@ const replies = [
     authorId: "agent-2",
     author: { id: "agent-2", name: "Bob Agent" },
     body: "Line one\nLine two",
+    isAi: false,
     createdAt: "2024-01-17T14:00:00.000Z",
   },
 ]
+
+const aiReply = {
+  id: "reply-ai",
+  ticketId: "ticket-1",
+  authorId: null,
+  author: null,
+  body: "Here's how to reset your password.",
+  isAi: true,
+  createdAt: "2024-01-18T10:00:00.000Z",
+}
 
 describe("ReplyThread", () => {
   beforeEach(() => {
@@ -126,5 +139,17 @@ describe("ReplyThread", () => {
 
     await screen.findByText("Have you tried resetting your password?")
     expect(screen.queryByText("No replies yet.")).not.toBeInTheDocument()
+  })
+
+  it("labels an AI-authored reply as the assistant with a badge", async () => {
+    mockGet.mockResolvedValue({ data: [aiReply] })
+
+    renderWithQuery(<ReplyThread ticket={ticket} />)
+
+    expect(
+      await screen.findByText("Here's how to reset your password.")
+    ).toBeInTheDocument()
+    expect(screen.getByText("AI Assistant")).toBeInTheDocument()
+    expect(screen.getByText("AI")).toBeInTheDocument()
   })
 })

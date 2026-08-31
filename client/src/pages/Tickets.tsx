@@ -76,6 +76,12 @@ function Tickets() {
           setFilters((prev) => ({ ...prev, category }))
           setPage(1)
         }}
+        onResolvedByAiChange={(resolvedByAi) => {
+          // Only carry the flag when opting in, so the default query key stays
+          // clean and the server applies its default (AI-resolved hidden).
+          setFilters((prev) => ({ ...prev, resolvedByAi: resolvedByAi || undefined }))
+          setPage(1)
+        }}
       />
 
       <TicketsTable

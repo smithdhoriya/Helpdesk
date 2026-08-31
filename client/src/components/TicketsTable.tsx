@@ -35,6 +35,8 @@ interface TicketsTableProps {
 }
 
 const statusVariant: Record<TicketStatus, "default" | "secondary" | "outline"> = {
+  [TicketStatus.new]: "default",
+  [TicketStatus.processing]: "outline",
   [TicketStatus.open]: "default",
   [TicketStatus.resolved]: "secondary",
   [TicketStatus.closed]: "outline",

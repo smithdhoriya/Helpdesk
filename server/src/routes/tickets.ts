@@ -19,6 +19,13 @@ const listTicketsQuerySchema = z.object({
   status: z.enum(TicketStatus).optional(),
   category: z.enum([...Object.values(TicketCategory), "uncategorized"]).optional(),
   search: z.string().trim().min(1).optional(),
+  // Tickets the AI resolved from the knowledge base are hidden by default so the
+  // list surfaces what needs a human; `?resolvedByAi=true` opts into showing
+  // them too. Parsed from the query string, so only the literal "true" enables it.
+  resolvedByAi: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true"),
   page: z.coerce.number().int().min(1).default(1),
 });
 
@@ -41,11 +48,14 @@ ticketsRouter.get("/", async (req, res) => {
     return;
   }
 
-  const { sortBy, sortOrder, status, category, search, page } = parsed.data;
+  const { sortBy, sortOrder, status, category, search, resolvedByAi, page } = parsed.data;
 
   const where: Prisma.TicketWhereInput = {
     status,
     category: category === "uncategorized" ? null : category,
+    // Hide AI-resolved tickets unless explicitly asked for. When opted in, the
+    // filter is dropped entirely so the list shows every ticket, AI-resolved or not.
+    resolvedByAi: resolvedByAi ? undefined : false,
     ...(search && {
       OR: [
         { subject: { contains: search, mode: "insensitive" } },
@@ -254,7 +264,12 @@ ticketsRouter.post("/:id/summarize", async (req, res) => {
     const summary = await summarizeTicket({
       subject: ticket.subject,
       body: ticket.body,
-      replies: replies.map((reply) => ({ author: reply.author.name, body: reply.body })),
+      // A reply with no author is an AI-written one (auto-resolution); label it
+      // as such for the summary rather than dereferencing a null author.
+      replies: replies.map((reply) => ({
+        author: reply.author?.name ?? "AI Assistant",
+        body: reply.body,
+      })),
     });
     res.json({ summary });
   } catch (error) {

@@ -13,6 +13,8 @@ enum UserRole {
 }
 
 enum TicketStatus {
+  new
+  processing
   open
   resolved
   closed
@@ -50,8 +52,12 @@ model Ticket {
   bodyHtml        String?
   senderEmail     String
   senderName      String?
-  status          TicketStatus    @default(open)
+  status          TicketStatus    @default(new)
   category        TicketCategory?
+  // True when the AI answered this ticket from the knowledge base on arrival.
+  // AI-resolved tickets are hidden from the ticket list by default (agents opt
+  // in with `?resolvedByAi=true`), so they don't bury the tickets needing a human.
+  resolvedByAi    Boolean         @default(false)
   assignedTo      String?
   assignee        User?           @relation(fields: [assignedTo], references: [id])
   sourceMessageId String?         @unique
@@ -66,8 +72,12 @@ model Reply {
   id        String   @id @default(uuid())
   ticketId  String
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
+  // Null for AI-authored replies (auto-resolutions written from the knowledge
+  // base), which have no human author. A human agent's reply always carries one.
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id])
+  // True when this reply was written by the AI rather than a human agent.
+  isAi      Boolean  @default(false)
   body      String
   createdAt DateTime @default(now())
 

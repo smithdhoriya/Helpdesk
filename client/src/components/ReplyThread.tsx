@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 
+import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { fetchReplies, ticketRepliesQueryKey, type Ticket } from "@/lib/tickets"
 
@@ -39,8 +40,11 @@ function ReplyThread({ ticket }: ReplyThreadProps) {
       {replies.map((reply) => (
         <li key={reply.id} className="rounded-lg border border-gray-200 p-3">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="text-sm font-medium text-gray-900">
-              {reply.author.name}
+            <span className="flex items-center gap-2 text-sm font-medium text-gray-900">
+              {/* AI-authored auto-resolutions have no human author; label them
+                  as the assistant rather than showing a blank name. */}
+              {reply.isAi ? "AI Assistant" : reply.author?.name ?? "Unknown"}
+              {reply.isAi && <Badge variant="secondary">AI</Badge>}
             </span>
             <span className="text-xs text-gray-400">
               {new Date(reply.createdAt).toLocaleString()}

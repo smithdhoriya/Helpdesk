@@ -92,9 +92,10 @@ describe("GET /api/tickets", () => {
     expect(res.body.tickets).toHaveLength(1);
     expect(res.body.tickets[0].id).toBe("ticket-1");
     expect(res.body).toMatchObject({ total: 1, page: 1, pageSize: 10 });
-    // Default sort is newest-first, first page, no filters applied.
+    // Default sort is newest-first, first page, no filters applied. AI-resolved
+    // tickets are hidden by default (`resolvedByAi: false`).
     expect(mockPrisma.ticket.findMany).toHaveBeenCalledWith({
-      where: { status: undefined, category: undefined },
+      where: { status: undefined, category: undefined, resolvedByAi: false },
       orderBy: { createdAt: "desc" },
       skip: 0,
       take: 10,
@@ -111,6 +112,7 @@ describe("GET /api/tickets", () => {
       where: {
         status: "open",
         category: "technicalQuestion",
+        resolvedByAi: false,
         OR: [
           { subject: { contains: "login", mode: "insensitive" } },
           { senderEmail: { contains: "login", mode: "insensitive" } },
@@ -120,6 +122,18 @@ describe("GET /api/tickets", () => {
       skip: 0,
       take: 10,
     });
+  });
+
+  it("drops the resolvedByAi filter when ?resolvedByAi=true opts into showing them", async () => {
+    await request(app).get("/api/tickets?resolvedByAi=true");
+
+    // Opting in leaves `resolvedByAi` undefined so Prisma applies no filter and
+    // the list includes AI-resolved tickets alongside the rest.
+    expect(mockPrisma.ticket.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ resolvedByAi: undefined }),
+      }),
+    );
   });
 
   it("maps the 'uncategorized' filter to a null category", async () => {
@@ -658,6 +672,31 @@ describe("POST /api/tickets/:id/summarize", () => {
       subject: ticket.subject,
       body: ticket.body,
       replies: [],
+    });
+  });
+
+  it("labels an AI-authored reply as 'AI Assistant' rather than dereferencing a null author", async () => {
+    const aiReplies = [
+      {
+        id: "reply-ai",
+        ticketId: "ticket-1",
+        authorId: null,
+        body: "Here's how to reset your password.",
+        createdAt: new Date("2024-01-16T00:00:00.000Z"),
+        author: null,
+      },
+    ];
+    mockPrisma.ticket.findUnique.mockResolvedValue(ticket as never);
+    mockPrisma.reply.findMany.mockResolvedValue(aiReplies as never);
+    mockSummarizeTicket.mockResolvedValue("Summary.");
+
+    const res = await postSummarize();
+
+    expect(res.status).toBe(200);
+    expect(mockSummarizeTicket).toHaveBeenCalledWith({
+      subject: ticket.subject,
+      body: ticket.body,
+      replies: [{ author: "AI Assistant", body: "Here's how to reset your password." }],
     });
   });
 

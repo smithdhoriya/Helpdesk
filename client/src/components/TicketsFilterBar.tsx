@@ -1,5 +1,7 @@
+import { Checkbox } from "@/components/ui/checkbox"
 import SelectField from "@/components/SelectField"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   TicketCategory,
   TicketStatus,
@@ -34,6 +36,7 @@ interface TicketsFilterBarProps {
   onSearchInputChange: (search: string) => void
   onStatusChange: (status: TicketStatus | undefined) => void
   onCategoryChange: (category: TicketsFilters["category"]) => void
+  onResolvedByAiChange: (resolvedByAi: boolean) => void
 }
 
 function TicketsFilterBar({
@@ -42,6 +45,7 @@ function TicketsFilterBar({
   onSearchInputChange,
   onStatusChange,
   onCategoryChange,
+  onResolvedByAiChange,
 }: TicketsFilterBarProps) {
   return (
     <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -72,6 +76,14 @@ function TicketsFilterBar({
           )
         }
       />
+
+      <Label className="flex items-center gap-2 text-sm font-normal text-gray-700">
+        <Checkbox
+          checked={filters.resolvedByAi ?? false}
+          onCheckedChange={(checked) => onResolvedByAiChange(checked === true)}
+        />
+        Show AI-resolved
+      </Label>
     </div>
   )
 }
