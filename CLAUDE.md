@@ -8,7 +8,8 @@ tickets, and suggest replies — reducing manual work for support agents.
 - **Frontend**: React + TypeScript, Tailwind CSS, shadcn/ui, React Router, axios + TanStack Query for data fetching
 - **Backend**: Node.js + Express + TypeScript (Bun runtime)
 - **Database**: PostgreSQL + Prisma
-- **AI**: Ollama running a local model, via the Vercel AI SDK (`ai` + `ollama-ai-provider-v2`) — free and offline, no API key. Currently used for reply polishing only (`server/src/lib/polish-reply.ts`); model and daemon URL come from `OLLAMA_MODEL` / `OLLAMA_BASE_URL`.
+- **AI**: Ollama running a local model, via the Vercel AI SDK (`ai` + `ollama-ai-provider-v2`) — free and offline, no API key. Used for reply polishing (`server/src/lib/polish-reply.ts`), ticket summarizing (`server/src/lib/summarize-ticket.ts`), and inbound-ticket classification (`server/src/lib/classify-ticket.ts`); model and daemon URL come from `OLLAMA_MODEL` / `OLLAMA_BASE_URL`.
+- **Background jobs**: pg-boss (`server/src/queue/`), a PostgreSQL-backed durable job queue that reuses `DATABASE_URL` (it manages its own `pgboss` schema — no Prisma migration). The inbound-email webhook enqueues a classification job instead of classifying inline; a worker started in `server/src/index.ts` consumes the queue, classifies the ticket, and saves the category — so classification is durable across restarts and retried (exponential backoff) on transient model/daemon failures. Enqueue on the request path, model calls in the worker.
 - **Authentication**: Better Auth, email/password with database-backed sessions (via Prisma)
 - **Testing**: Vitest + React Testing Library (component tests), Playwright (E2E)
 - **Validation**: Zod, on both client and server (see Key Conventions)

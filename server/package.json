@@ -24,6 +24,7 @@
     "cors": "^2.8.6",
     "express": "^4.21.2",
     "ollama-ai-provider-v2": "^4.0.1",
+    "pg-boss": "^12.29.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

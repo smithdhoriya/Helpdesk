@@ -121,7 +121,11 @@
       "Bash(awk -F= '{print \"chars:\", length\\($2\\)}')",
       "Bash(echo \"client-tsc exit: $?\")",
       "Bash(echo \"server tsc EXIT: $?\")",
-      "Bash(echo \"client tsc EXIT: $?\")"
+      "Bash(echo \"client tsc EXIT: $?\")",
+      "WebFetch(domain:pgboss.io)",
+      "Bash(git -C .. status --short)",
+      "Bash(echo \"launched, pid $!\")",
+      "Bash(exit 1)"
     ]
   }
 }

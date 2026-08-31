@@ -2,6 +2,7 @@ import { Router, type NextFunction, type Request, type Response } from "express"
 import { z } from "zod";
 
 import { prisma } from "../db";
+import { enqueueTicketClassification } from "../queue";
 import { sendValidationError } from "../lib/validation";
 
 export const webhooksRouter = Router();
@@ -93,6 +94,18 @@ webhooksRouter.post("/inbound-email", requireWebhookSecret, async (req, res) => 
       sourceMessageId: messageId ?? null,
     },
   });
+
+  // Enqueue durable AI classification — the ticket's category is filled in later
+  // by the queue worker, off the request path, so creating a ticket never waits
+  // on the model. Awaiting only the (fast) enqueue guarantees the job is durably
+  // recorded before we respond; a failure to enqueue is logged but never fails
+  // the webhook, since the ticket is already saved and an agent can categorize it
+  // by hand.
+  try {
+    await enqueueTicketClassification(ticket.id);
+  } catch (error) {
+    console.error(`Failed to enqueue classification for ticket ${ticket.id}`, error);
+  }
 
   res.status(201).json(ticket);
 });

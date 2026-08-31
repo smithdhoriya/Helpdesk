@@ -22,13 +22,22 @@ vi.mock("../middleware/require-auth", () => ({
 
 vi.mock("../generated/client/client", () => ({ Prisma: {} }));
 
+// The webhook only *enqueues* classification now — the actual model call lives in
+// the queue worker (tested separately). Stub the enqueue so these route tests
+// never touch a real queue or database, and assert the webhook hands the job off.
+vi.mock("../queue", () => ({
+  enqueueTicketClassification: vi.fn(),
+}));
+
 const WEBHOOK_SECRET = "test-webhook-secret";
 process.env.INBOUND_EMAIL_WEBHOOK_SECRET = WEBHOOK_SECRET;
 
 import { app } from "../app";
 import { prisma } from "../db";
+import { enqueueTicketClassification } from "../queue";
 
 const mockPrisma = vi.mocked(prisma, true);
+const mockEnqueue = vi.mocked(enqueueTicketClassification);
 
 const payload = {
   from: "customer@example.com",
@@ -63,6 +72,9 @@ function postInboundEmail(data: Record<string, unknown>) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockPrisma.ticket.findUnique.mockResolvedValue(null as never);
+  // Benign default so the enqueue in the existing tests resolves cleanly; the
+  // enqueue-failure test below overrides this.
+  mockEnqueue.mockResolvedValue(undefined);
 });
 
 describe("POST /api/webhooks/inbound-email — bodyHtml", () => {
@@ -190,5 +202,57 @@ describe("POST /api/webhooks/inbound-email — sender name", () => {
 
     expect(res.status).toBe(400);
     expect(mockPrisma.ticket.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/webhooks/inbound-email — AI classification queue", () => {
+  beforeEach(() => {
+    mockPrisma.ticket.create.mockResolvedValue(created as never);
+  });
+
+  it("enqueues a durable classification job for the created ticket", async () => {
+    const res = await postInboundEmail(payload);
+
+    expect(res.status).toBe(201);
+    expect(res.body.id).toBe("ticket-1");
+    // The webhook hands the ticket id to the queue; the worker classifies later.
+    expect(mockEnqueue).toHaveBeenCalledWith("ticket-1");
+  });
+
+  it("does not classify inline — the request never writes a category itself", async () => {
+    await postInboundEmail(payload);
+
+    // Classification (and the resulting ticket.update) is the worker's job now,
+    // off the request path — the route only enqueues.
+    expect(mockPrisma.ticket.update).not.toHaveBeenCalled();
+  });
+
+  it("still creates the ticket (201) when enqueueing fails", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockEnqueue.mockRejectedValue(new Error("queue unreachable"));
+
+    const res = await postInboundEmail(payload);
+
+    // A queue outage must never turn a successfully-received ticket into a
+    // failed one: the ticket is saved and the failure is only logged.
+    expect(res.status).toBe(201);
+    expect(res.body.id).toBe("ticket-1");
+    await vi.waitFor(() => {
+      expect(consoleError).toHaveBeenCalled();
+    });
+
+    consoleError.mockRestore();
+  });
+
+  it("does not enqueue for a duplicate ticket (same messageId)", async () => {
+    // A resent email matches an existing ticket that was already classified on
+    // first receipt, so no create and no re-enqueue happens.
+    mockPrisma.ticket.findUnique.mockResolvedValue(created as never);
+
+    const res = await postInboundEmail(payload);
+
+    expect(res.status).toBe(200);
+    expect(mockPrisma.ticket.create).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
   });
 });
