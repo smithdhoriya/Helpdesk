@@ -1,19 +1,16 @@
 import { generateObject, APICallError, RetryError } from "ai";
-import { createOllama } from "ollama-ai-provider-v2";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 import { TicketCategory } from "../generated/client/enums";
 
-// Classifying reuses the same local Ollama daemon and model as reply polishing
-// and summarizing: it runs on this machine, costs nothing per call, and the
-// ticket never leaves the host. The model is configurable (whoever ran
-// `ollama pull` decides what exists); the default is a small instruct model.
-export const classifyModel = process.env.OLLAMA_MODEL ?? "llama3.2";
+// Classifying reuses the same Gemini API and model as reply polishing and
+// summarizing, called through the Vercel AI SDK. The model is configurable via
+// env var; the default is a small, fast Gemini model.
+export const classifyModel = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
-// Defaults to `http://127.0.0.1:11434/api`. Override when Ollama isn't on the
-// same host as the API.
-const ollama = createOllama(
-  process.env.OLLAMA_BASE_URL ? { baseURL: process.env.OLLAMA_BASE_URL } : {},
-);
+// The provider reads `GOOGLE_GENERATIVE_AI_API_KEY` by default; this app names
+// its env var `GEMINI_API_KEY` instead, so it's passed through explicitly.
+const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // The exact set of categories the model may choose from — sourced from the
 // generated Prisma enum so it can never drift from the database column. The
@@ -80,7 +77,7 @@ function buildClassifyPrompt({ subject, body }: TicketToClassify): string {
  */
 export async function classifyTicket(ticket: TicketToClassify): Promise<TicketCategory> {
   const { object } = await generateObject({
-    model: ollama(classifyModel),
+    model: google(classifyModel),
     output: "enum",
     enum: CATEGORY_VALUES,
     system: SYSTEM_PROMPT,
@@ -88,8 +85,8 @@ export async function classifyTicket(ticket: TicketToClassify): Promise<TicketCa
     // Classification is a deterministic pick, not a creative task: temperature 0
     // keeps the model choosing the best-fitting category rather than varying.
     temperature: 0,
-    // A daemon that isn't running won't start mid-request and a refused socket
-    // fails instantly, so one retry absorbs a blip without doubling the wait.
+    // A network blip or transient API error fails fast, so one retry absorbs it
+    // without doubling the wait.
     maxRetries: 1,
   });
 
@@ -117,7 +114,7 @@ export function classifyFailureReason(error: unknown): ClassifyFailureReason {
 
   if (!apiError) return "unknown";
 
-  // Ollama answers 404 for a model it hasn't pulled.
+  // Google answers 404 for an unknown/unavailable model name.
   if (apiError.statusCode === 404) return "modelMissing";
 
   // A refused or reset socket becomes an `APICallError` with no HTTP status.

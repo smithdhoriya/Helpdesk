@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "../db";
 import { Prisma } from "../generated/client/client";
 import { TicketCategory, TicketStatus } from "../generated/client/enums";
+import { sendEmail } from "../lib/mailer";
 import { polishFailureReason, polishModel, polishReply } from "../lib/polish-reply";
 import { summarizeTicket, summaryFailureReason, summaryModel } from "../lib/summarize-ticket";
 import { sendValidationError } from "../lib/validation";
@@ -177,6 +178,23 @@ ticketsRouter.post("/:id/replies", async (req, res) => {
     },
     include: { author: { select: replyAuthorSelect } },
   });
+
+  // Email the reply to the customer through the configured SMTP server (Mailpit
+  // in local dev). Best-effort and off the response's critical path: the reply is
+  // already persisted, so a mail failure is logged but never fails the request —
+  // the same resilience the inbound webhook applies to its enqueues. When SMTP is
+  // unconfigured (SMTP_HOST unset) this is a no-op, so the app works unchanged
+  // without email set up.
+  try {
+    await sendEmail({
+      to: ticket.senderEmail,
+      subject: `Re: ${ticket.subject}`,
+      text: parsed.data.body,
+      inReplyTo: ticket.sourceMessageId,
+    });
+  } catch (error) {
+    console.error(`Failed to email reply for ticket ${id}`, error);
+  }
 
   res.status(201).json(reply);
 });

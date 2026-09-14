@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Stub the AI SDK's `generateText` so these tests never reach a model, while
 // keeping the real `APICallError` / `RetryError` classes that
-// `summaryFailureReason` depends on. `ollama-ai-provider-v2` is stubbed too, so
-// module load doesn't construct a real provider — the returned "model" is opaque
-// and only ever forwarded to the mocked `generateText`.
+// `summaryFailureReason` depends on. `@ai-sdk/google` is stubbed too, so module
+// load doesn't construct a real provider — the returned "model" is opaque and
+// only ever forwarded to the mocked `generateText`.
 const generateTextMock = vi.fn();
 
 vi.mock("ai", async (importActual) => ({
@@ -12,8 +12,8 @@ vi.mock("ai", async (importActual) => ({
   generateText: (...args: unknown[]) => generateTextMock(...args),
 }));
 
-vi.mock("ollama-ai-provider-v2", () => ({
-  createOllama: () => () => "mock-model",
+vi.mock("@ai-sdk/google", () => ({
+  createGoogleGenerativeAI: () => () => "mock-model",
 }));
 
 import { APICallError, RetryError } from "ai";

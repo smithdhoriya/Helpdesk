@@ -591,8 +591,8 @@ describe("POST /api/tickets/:id/replies/polish", () => {
   it("returns 503 naming the model when it has not been pulled", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     mockPrisma.ticket.findUnique.mockResolvedValue(ticket as never);
-    // Ollama answers 404 for a model it doesn't have. It isn't retryable, so it
-    // reaches the route unwrapped.
+    // Google answers 404 for an unknown/unavailable model. It isn't retryable,
+    // so it reaches the route unwrapped.
     mockPolishReply.mockRejectedValue(
       new APICallError({
         message: `model "${polishModel}" not found, try pulling it first`,
@@ -605,7 +605,7 @@ describe("POST /api/tickets/:id/replies/polish", () => {
     const res = await postPolish({ body: draft });
 
     expect(res.status).toBe(503);
-    // Naming the model is what makes the error actionable (`ollama pull <model>`).
+    // Naming the model is what makes the error actionable.
     expect(res.body.error).toContain(polishModel);
     expect(res.body.error).toContain("not installed");
   });

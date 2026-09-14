@@ -2,20 +2,17 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateObject, APICallError, RetryError } from "ai";
-import { createOllama } from "ollama-ai-provider-v2";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
 
-// Auto-resolution reuses the same local Ollama daemon and model as the other AI
-// features: it runs on this machine, costs nothing per call, and the ticket
-// never leaves the host. The model is configurable (whoever ran `ollama pull`
-// decides what exists); the default is a small instruct model.
-export const autoResolveModel = process.env.OLLAMA_MODEL ?? "llama3.2";
+// Auto-resolution reuses the same Gemini API and model as the other AI
+// features, called through the Vercel AI SDK. The model is configurable via
+// env var; the default is a small, fast Gemini model.
+export const autoResolveModel = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
-// Defaults to `http://127.0.0.1:11434/api`. Override when Ollama isn't on the
-// same host as the API.
-const ollama = createOllama(
-  process.env.OLLAMA_BASE_URL ? { baseURL: process.env.OLLAMA_BASE_URL } : {},
-);
+// The provider reads `GOOGLE_GENERATIVE_AI_API_KEY` by default; this app names
+// its env var `GEMINI_API_KEY` instead, so it's passed through explicitly.
+const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // The knowledge base lives at the server package root, next to `package.json`.
 // Resolved relative to this source file (this module is at `src/lib/`) so it is
@@ -161,7 +158,7 @@ export async function autoResolveTicket(
   knowledgeBase: string,
 ): Promise<AutoResolution> {
   const { object } = await generateObject({
-    model: ollama(autoResolveModel),
+    model: google(autoResolveModel),
     schema: resolutionSchema,
     system: SYSTEM_PROMPT,
     prompt: buildResolvePrompt(ticket, knowledgeBase),
@@ -169,8 +166,8 @@ export async function autoResolveTicket(
     // a creative one: temperature 0 keeps the model grounded in the knowledge
     // base rather than embellishing an answer or resolving on a hunch.
     temperature: 0,
-    // A daemon that isn't running won't start mid-request and a refused socket
-    // fails instantly, so one retry absorbs a blip without doubling the wait.
+    // A network blip or transient API error fails fast, so one retry absorbs it
+    // without doubling the wait.
     maxRetries: 1,
   });
 
@@ -203,7 +200,7 @@ export function autoResolveFailureReason(error: unknown): AutoResolveFailureReas
 
   if (!apiError) return "unknown";
 
-  // Ollama answers 404 for a model it hasn't pulled.
+  // Google answers 404 for an unknown/unavailable model name.
   if (apiError.statusCode === 404) return "modelMissing";
 
   // A refused or reset socket becomes an `APICallError` with no HTTP status.

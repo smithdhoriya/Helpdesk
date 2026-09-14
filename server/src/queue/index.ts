@@ -65,19 +65,19 @@ export async function startQueue(): Promise<void> {
   const instance = getBoss();
   await instance.start();
   await instance.createQueue(CLASSIFY_TICKET_QUEUE, {
-    // A failed classification is usually a transient Ollama blip (the daemon
-    // restarting, the model still loading), so retry a few times with
-    // exponential backoff rather than giving up on the first miss. Once the
-    // retries are exhausted the job is marked failed and the ticket simply stays
-    // uncategorized — the same end state as before, but only after recovery has
-    // genuinely been attempted.
+    // A failed classification is usually a transient Gemini API blip (a rate
+    // limit, a network hiccup), so retry a few times with exponential backoff
+    // rather than giving up on the first miss. Once the retries are exhausted
+    // the job is marked failed and the ticket simply stays uncategorized — the
+    // same end state as before, but only after recovery has genuinely been
+    // attempted.
     retryLimit: 3,
     retryDelay: 5,
     retryBackoff: true,
   });
   await instance.createQueue(AUTO_RESOLVE_TICKET_QUEUE, {
     // Same rationale as classification: a failed auto-resolve attempt is usually
-    // a transient model/daemon blip, so retry with backoff. Once retries are
+    // a transient Gemini API blip, so retry with backoff. Once retries are
     // exhausted the ticket is simply left open for a human — the safe default.
     retryLimit: 3,
     retryDelay: 5,

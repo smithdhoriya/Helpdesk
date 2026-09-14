@@ -1,17 +1,14 @@
 import { generateText, APICallError, RetryError } from "ai";
-import { createOllama } from "ollama-ai-provider-v2";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
-// Summarizing reuses the same local Ollama daemon and model as reply polishing:
-// it runs on this machine, costs nothing per call, and the ticket never leaves
-// the host. The model is configurable (whoever ran `ollama pull` decides what
-// exists); the default is a small instruct model that summarizes well.
-export const summaryModel = process.env.OLLAMA_MODEL ?? "llama3.2";
+// Summarizing reuses the same Gemini API and model as reply polishing, called
+// through the Vercel AI SDK. The model is configurable via env var; the
+// default is a small, fast Gemini model that summarizes well.
+export const summaryModel = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
-// Defaults to `http://127.0.0.1:11434/api`. Override when Ollama isn't on the
-// same host as the API.
-const ollama = createOllama(
-  process.env.OLLAMA_BASE_URL ? { baseURL: process.env.OLLAMA_BASE_URL } : {},
-);
+// The provider reads `GOOGLE_GENERATIVE_AI_API_KEY` by default; this app names
+// its env var `GEMINI_API_KEY` instead, so it's passed through explicitly.
+const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // Unlike polishing — which is deliberately blinkered to the agent's draft — a
 // summary is *about* the whole ticket, so the model is handed the subject, the
@@ -90,14 +87,14 @@ function cleanSummary(text: string): string {
  */
 export async function summarizeTicket(conversation: TicketConversation): Promise<string> {
   const { text } = await generateText({
-    model: ollama(summaryModel),
+    model: google(summaryModel),
     system: SYSTEM_PROMPT,
     prompt: buildSummaryPrompt(conversation),
     // A summary must stay faithful to the conversation, so a low temperature
     // keeps the model condensing what is there rather than embellishing it.
     temperature: 0.3,
-    // A daemon that isn't running won't start mid-request and a refused socket
-    // fails instantly, so one retry absorbs a blip without doubling the wait.
+    // A network blip or transient API error fails fast, so one retry absorbs it
+    // without doubling the wait.
     maxRetries: 1,
   });
 
@@ -128,7 +125,7 @@ export function summaryFailureReason(error: unknown): SummaryFailureReason {
 
   if (!apiError) return "unknown";
 
-  // Ollama answers 404 for a model it hasn't pulled.
+  // Google answers 404 for an unknown/unavailable model name.
   if (apiError.statusCode === 404) return "modelMissing";
 
   // A refused or reset socket becomes an `APICallError` with no HTTP status.

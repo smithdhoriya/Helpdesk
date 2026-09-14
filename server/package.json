@@ -16,6 +16,7 @@
     "db:test:seed": "bun --env-file=.env.test prisma/seed.ts"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.69",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "ai": "^7.0.84",
@@ -23,7 +24,7 @@
     "core": "workspace:*",
     "cors": "^2.8.6",
     "express": "^4.21.2",
-    "ollama-ai-provider-v2": "^4.0.1",
+    "nodemailer": "9.0.6",
     "pg-boss": "^12.29.0",
     "zod": "^4.4.3"
   },
@@ -31,6 +32,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
     "@types/node": "^22.10.2",
+    "@types/nodemailer": "8.0.1",
     "@types/supertest": "^6.0.2",
     "dotenv": "^17.4.2",
     "prisma": "^7.8.0",

@@ -1,18 +1,14 @@
 import { generateText, APICallError, RetryError } from "ai";
-import { createOllama } from "ollama-ai-provider-v2";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
-// Ollama runs the model on this machine, so polishing costs nothing per call
-// and the agent's draft never leaves the host. Which model exists is up to
-// whoever ran `ollama pull`, so the choice is configurable; the default is a
-// small instruct model that handles a rewrite well and loads quickly.
-export const polishModel = process.env.OLLAMA_MODEL ?? "llama3.2";
+// Polishing calls Google's Gemini API through the Vercel AI SDK. The model is
+// configurable via env var; the default is a small, fast Gemini model that
+// handles a rewrite well.
+export const polishModel = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
-// The provider defaults to `http://127.0.0.1:11434/api`. Override it when
-// Ollama isn't on the same host as the API — e.g. this server in a container
-// reaching a daemon on the host or in a sidecar.
-const ollama = createOllama(
-  process.env.OLLAMA_BASE_URL ? { baseURL: process.env.OLLAMA_BASE_URL } : {},
-);
+// The provider reads `GOOGLE_GENERATIVE_AI_API_KEY` by default; this app names
+// its env var `GEMINI_API_KEY` instead, so it's passed through explicitly.
+const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // The draft is written by an authenticated agent, and the polished text lands
 // back in the reply textarea for that agent to read before sending — nothing is
@@ -238,7 +234,7 @@ export interface PolishOptions {
  */
 export async function polishReply(draft: string, options: PolishOptions = {}): Promise<string> {
   const { text } = await generateText({
-    model: ollama(polishModel),
+    model: google(polishModel),
     system: SYSTEM_PROMPT,
     prompt: buildPolishPrompt(draft),
     // Polishing is a faithful rewrite, not a creative task: temperature 0 keeps
@@ -246,9 +242,8 @@ export async function polishReply(draft: string, options: PolishOptions = {}): P
     // around it or padding it with commentary — the failure modes a small model
     // slides into at the default sampling temperature.
     temperature: 0,
-    // A daemon that isn't running won't start mid-request, and a refused socket
-    // fails instantly, so one retry absorbs a blip without doubling the time an
-    // agent spends watching the button spin.
+    // A network blip or transient API error fails fast, so one retry absorbs it
+    // without doubling the time an agent spends watching the button spin.
     maxRetries: 1,
   });
 
@@ -296,7 +291,7 @@ export function polishFailureReason(error: unknown): PolishFailureReason {
 
   if (!apiError) return "unknown";
 
-  // Ollama answers 404 for a model it hasn't pulled.
+  // Google answers 404 for an unknown/unavailable model name.
   if (apiError.statusCode === 404) return "modelMissing";
 
   // The SDK converts a refused or reset socket into an `APICallError` carrying
