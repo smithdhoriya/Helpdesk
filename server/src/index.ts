@@ -1,3 +1,6 @@
+// Imported first so Sentry can capture errors throughout the app's lifecycle.
+import "./instrument";
+
 import { app } from "./app";
 import { startQueue, stopQueue } from "./queue";
 
