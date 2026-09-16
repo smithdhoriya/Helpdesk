@@ -18,7 +18,16 @@ app.use(cors({ origin: process.env.TRUSTED_ORIGIN!, credentials: true }));
 app.all("/api/auth/*", toNodeHandler(auth));
 
 // Mounted after the Better Auth handler so its own body parsing isn't interfered with.
-app.use(express.json());
+// `verify` stashes the raw bytes on `req.rawBody` alongside the parsed body —
+// needed by the inbound-email webhook to verify Resend's Svix signature,
+// which is computed over the exact bytes Resend sent, not a re-serialized copy.
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      (req as express.Request).rawBody = buf;
+    },
+  }),
+);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", message: "Helpdesk API" });

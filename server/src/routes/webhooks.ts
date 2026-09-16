@@ -1,5 +1,6 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
+import { Resend } from "resend";
 
 import { prisma } from "../db";
 import { enqueueTicketAutoResolve, enqueueTicketClassification } from "../queue";
@@ -7,6 +8,12 @@ import { sendValidationError } from "../lib/validation";
 
 export const webhooksRouter = Router();
 
+// Used to gate POST /inbound-email via a static shared secret on the
+// `x-webhook-secret` header. Resend's `email.received` webhook (the only
+// caller of this route now — see below) carries its own Svix signature
+// instead, verified with RESEND_WEBHOOK_SECRET, so this is no longer wired
+// into the route. Left in place rather than deleted: INBOUND_EMAIL_WEBHOOK_SECRET
+// is still a documented env var and this is its only reader.
 function requireWebhookSecret(req: Request, res: Response, next: NextFunction) {
   const secret = process.env.INBOUND_EMAIL_WEBHOOK_SECRET;
 
@@ -16,6 +23,18 @@ function requireWebhookSecret(req: Request, res: Response, next: NextFunction) {
   }
 
   next();
+}
+
+// Lazily built, mirroring lib/mailer.ts's outbound client, so importing this
+// module never touches the network. Used for two things: verifying the
+// Svix-signed webhook (pure signature check, no network call) and fetching a
+// received email's content from Resend's Receiving API.
+let resendClient: Resend | null = null;
+function getResendClient(): Resend {
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
 }
 
 const inboundEmailSchema = z.object({
@@ -52,23 +71,25 @@ function parseFrom(from: string): { name: string | null; email: string } {
   return { name: null, email: from.trim() };
 }
 
-webhooksRouter.post("/inbound-email", requireWebhookSecret, async (req, res) => {
-  const parsed = inboundEmailSchema.safeParse(req.body);
-
-  if (!parsed.success) {
-    sendValidationError(res, parsed.error);
-    return;
-  }
-
-  const { from, fromName, subject, body, bodyHtml, messageId } = parsed.data;
+// The ticket-creation contract, unchanged from before Resend was wired in:
+// parse the sender, dedupe on messageId, create the ticket, then enqueue the
+// two AI jobs off the request path. Takes already-schema-validated fields so
+// the only caller (the Resend adapter below) validates its mapped payload
+// with the same `inboundEmailSchema` before reaching this point.
+async function createTicketFromInboundEmail(
+  data: z.infer<typeof inboundEmailSchema>,
+): Promise<
+  | { ok: true; status: 200 | 201; ticket: Awaited<ReturnType<typeof prisma.ticket.create>> }
+  | { ok: false; error: z.ZodError }
+> {
+  const { from, fromName, subject, body, bodyHtml, messageId } = data;
 
   // Extract the address from the `From` value, then validate it as an email —
   // deferred from the schema because `from` may carry a display name too.
   const sender = parseFrom(from);
   const emailResult = z.string().email().safeParse(sender.email);
   if (!emailResult.success) {
-    sendValidationError(res, emailResult.error);
-    return;
+    return { ok: false, error: emailResult.error };
   }
 
   // An explicit `fromName` wins over a name parsed from the header.
@@ -79,8 +100,7 @@ webhooksRouter.post("/inbound-email", requireWebhookSecret, async (req, res) => 
       where: { sourceMessageId: messageId },
     });
     if (existing) {
-      res.status(200).json(existing);
-      return;
+      return { ok: true, status: 200, ticket: existing };
     }
   }
 
@@ -114,5 +134,82 @@ webhooksRouter.post("/inbound-email", requireWebhookSecret, async (req, res) => 
     console.error(`Failed to enqueue auto-resolve for ticket ${ticket.id}`, error);
   }
 
-  res.status(201).json(ticket);
+  return { ok: true, status: 201, ticket };
+}
+
+webhooksRouter.post("/inbound-email", async (req, res) => {
+  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    console.error("RESEND_WEBHOOK_SECRET is not set; rejecting inbound email webhook");
+    res.status(500).json({ error: "Inbound email webhook is not configured" });
+    return;
+  }
+
+  const svixId = req.header("svix-id");
+  const svixTimestamp = req.header("svix-timestamp");
+  const svixSignature = req.header("svix-signature");
+
+  if (!svixId || !svixTimestamp || !svixSignature || !req.rawBody) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  // Verified against the raw request bytes (see app.ts's express.json
+  // `verify` option) — Svix signs the exact payload sent, not a re-serialized
+  // copy of the parsed body, which can differ in key order/whitespace.
+  let event;
+  try {
+    event = getResendClient().webhooks.verify({
+      payload: req.rawBody.toString("utf8"),
+      headers: { id: svixId, timestamp: svixTimestamp, signature: svixSignature },
+      webhookSecret,
+    });
+  } catch (error) {
+    console.error("Resend webhook signature verification failed", error);
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  // Only `email.received` creates a ticket. Any other subscribed event type
+  // is acknowledged (200) so Resend doesn't retry it, but otherwise ignored.
+  if (event.type !== "email.received") {
+    res.status(200).json({ received: true });
+    return;
+  }
+
+  // The webhook payload carries only metadata — no body — by design (so large
+  // attachments don't blow out serverless request-body limits). The actual
+  // text/html content requires a separate call to the Receiving API.
+  const { email_id, from, to, subject, message_id } = event.data;
+  const { data: email, error: fetchError } = await getResendClient().emails.receiving.get(
+    email_id,
+  );
+
+  if (fetchError || !email) {
+    console.error(`Failed to fetch received email ${email_id} from Resend`, fetchError);
+    res.status(502).json({ error: "Failed to fetch email content from Resend" });
+    return;
+  }
+
+  const parsed = inboundEmailSchema.safeParse({
+    from,
+    to: to[0],
+    subject,
+    body: email.text ?? "",
+    bodyHtml: email.html ?? null,
+    messageId: message_id,
+  });
+
+  if (!parsed.success) {
+    sendValidationError(res, parsed.error);
+    return;
+  }
+
+  const result = await createTicketFromInboundEmail(parsed.data);
+  if (!result.ok) {
+    sendValidationError(res, result.error);
+    return;
+  }
+
+  res.status(result.status).json(result.ticket);
 });

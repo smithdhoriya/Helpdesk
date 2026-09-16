@@ -7,6 +7,8 @@ declare global {
     interface Request {
       session?: AuthSession["session"];
       user?: AuthSession["user"];
+      /** Raw JSON body bytes, captured by express.json()'s `verify` option for webhook signature verification (see routes/webhooks.ts). */
+      rawBody?: Buffer;
     }
   }
 }
