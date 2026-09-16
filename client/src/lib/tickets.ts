@@ -43,6 +43,8 @@ export const ticketCategoryLabels: Record<TicketCategory, string> = {
   [TicketCategory.refundRequest]: "Refund Request",
 }
 
+export const UNCATEGORIZED_LABEL = "Uncategorized"
+
 export type Ticket = {
   id: string
   subject: string

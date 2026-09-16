@@ -9,6 +9,7 @@ import {
   TicketStatus,
   ticketCategoryLabels,
   ticketStatusLabels,
+  UNCATEGORIZED_LABEL,
   type TicketsFilters,
 } from "@/lib/tickets"
 
@@ -29,7 +30,7 @@ const categoryItems = [
     value,
     label: ticketCategoryLabels[value],
   })),
-  { value: "uncategorized", label: "Uncategorized" },
+  { value: "uncategorized", label: UNCATEGORIZED_LABEL },
 ]
 
 interface TicketsFilterBarProps {
