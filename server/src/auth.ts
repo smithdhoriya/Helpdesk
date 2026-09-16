@@ -12,6 +12,12 @@ export const auth = betterAuth({
   rateLimit: {
     enabled: process.env.NODE_ENV === "production",
   },
+  advanced: {
+    defaultCookieAttributes: {
+      sameSite: "none",
+      secure: true,
+    },
+  },
   user: {
     additionalFields: {
       role: {
