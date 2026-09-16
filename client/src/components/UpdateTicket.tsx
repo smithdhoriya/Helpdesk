@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { CircleDot, Tag, User } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import SelectField from "@/components/SelectField"
@@ -56,13 +57,16 @@ function UpdateTicket({ ticket }: UpdateTicketProps) {
   ]
 
   return (
-    <Card className="h-fit">
+    <Card className="sticky top-20">
       <CardHeader>
         <CardTitle className="text-base">Details</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-1.5">
-          <span className="block text-sm font-medium text-gray-700">Status</span>
+          <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+            <CircleDot aria-hidden="true" className="size-3.5 text-muted-foreground" />
+            Status
+          </span>
           <SelectField
             items={statusItems}
             value={ticket.status}
@@ -75,7 +79,10 @@ function UpdateTicket({ ticket }: UpdateTicketProps) {
         </div>
 
         <div className="space-y-1.5">
-          <span className="block text-sm font-medium text-gray-700">Category</span>
+          <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+            <Tag aria-hidden="true" className="size-3.5 text-muted-foreground" />
+            Category
+          </span>
           <SelectField
             items={categoryItems}
             value={ticket.category ?? UNCATEGORIZED}
@@ -92,7 +99,10 @@ function UpdateTicket({ ticket }: UpdateTicketProps) {
         </div>
 
         <div className="space-y-1.5">
-          <span className="block text-sm font-medium text-gray-700">Assigned to</span>
+          <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+            <User aria-hidden="true" className="size-3.5 text-muted-foreground" />
+            Assigned to
+          </span>
           <SelectField
             items={agentItems}
             value={ticket.assignedTo ?? UNASSIGNED}

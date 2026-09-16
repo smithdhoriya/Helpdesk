@@ -42,10 +42,10 @@ function TicketSummary({ ticket }: TicketSummaryProps) {
           </FieldError>
         )}
         {mutation.data ? (
-          <p className="whitespace-pre-wrap text-sm text-gray-900">{mutation.data}</p>
+          <p className="whitespace-pre-wrap text-sm text-foreground">{mutation.data}</p>
         ) : (
           !mutation.isError && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Generate an AI summary of this ticket and its conversation.
             </p>
           )

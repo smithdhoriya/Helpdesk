@@ -18,6 +18,17 @@ export const ticketStatusLabels: Record<TicketStatus, string> = {
   [TicketStatus.closed]: "Closed",
 }
 
+// Ticket status carries a real state signal (needs a reply vs. done), so it's
+// colored semantically rather than through the primary/secondary badge
+// variants, which are reserved for actions and emphasis, not status.
+export const ticketStatusBadgeClassName: Record<TicketStatus, string> = {
+  [TicketStatus.new]: "bg-warning/10 text-warning-foreground",
+  [TicketStatus.processing]: "bg-muted text-muted-foreground",
+  [TicketStatus.open]: "bg-warning/10 text-warning-foreground",
+  [TicketStatus.resolved]: "bg-success/10 text-success-foreground",
+  [TicketStatus.closed]: "bg-muted text-muted-foreground",
+}
+
 export const TicketCategory = {
   generalQuestion: "generalQuestion",
   technicalQuestion: "technicalQuestion",

@@ -19,9 +19,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 import {
-  TicketStatus,
   ticketCategoryLabels,
+  ticketStatusBadgeClassName,
   ticketStatusLabels,
   type Ticket,
 } from "@/lib/tickets"
@@ -32,14 +33,6 @@ interface TicketsTableProps {
   isError: boolean
   sorting: SortingState
   onSortingChange: OnChangeFn<SortingState>
-}
-
-const statusVariant: Record<TicketStatus, "default" | "secondary" | "outline"> = {
-  [TicketStatus.new]: "default",
-  [TicketStatus.processing]: "outline",
-  [TicketStatus.open]: "default",
-  [TicketStatus.resolved]: "secondary",
-  [TicketStatus.closed]: "outline",
 }
 
 const columnHelper = createColumnHelper<Ticket>()
@@ -57,19 +50,31 @@ const columns = [
     header: "Status",
     cell: (info) => {
       const status = info.getValue()
-      return <Badge variant={statusVariant[status]}>{ticketStatusLabels[status]}</Badge>
+      return (
+        <Badge variant="outline" className={ticketStatusBadgeClassName[status]}>
+          {ticketStatusLabels[status]}
+        </Badge>
+      )
     },
   }),
   columnHelper.accessor("category", {
     header: "Category",
     cell: (info) => {
       const category = info.getValue()
-      return category ? ticketCategoryLabels[category] : "Uncategorized"
+      return (
+        <Badge variant="outline" className="text-muted-foreground">
+          {category ? ticketCategoryLabels[category] : "Uncategorized"}
+        </Badge>
+      )
     },
   }),
   columnHelper.accessor("createdAt", {
     header: "Created",
-    cell: (info) => new Date(info.getValue()).toLocaleDateString(),
+    cell: (info) => (
+      <span className="tabular-nums">
+        {new Date(info.getValue()).toLocaleDateString()}
+      </span>
+    ),
   }),
 ]
 
@@ -131,9 +136,9 @@ function TicketsTable({
   })
 
   return (
-    <div className="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div className="mt-6 rounded-lg border border-border bg-card">
       {isError && (
-        <p className="p-6 text-sm text-red-600">Failed to load tickets</p>
+        <p className="p-6 text-sm text-destructive">Failed to load tickets</p>
       )}
 
       {(isPending || tickets) && (
@@ -153,11 +158,17 @@ function TicketsTable({
                     >
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1"
+                        className="-mx-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-1 transition-colors hover:bg-muted"
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
-                        <SortIcon aria-hidden="true" className="size-3.5" />
+                        <SortIcon
+                          aria-hidden="true"
+                          className={cn(
+                            "size-3.5",
+                            sortDirection ? "text-foreground" : "text-muted-foreground/60"
+                          )}
+                        />
                       </button>
                     </TableHead>
                   )
@@ -196,7 +207,10 @@ function TicketsTable({
                 {row.getVisibleCells().map((cell) => (
                   <TableCell
                     key={cell.id}
-                    className={truncatedColumns.has(cell.column.id) ? "truncate" : undefined}
+                    className={cn(
+                      "py-3",
+                      truncatedColumns.has(cell.column.id) && "truncate"
+                    )}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as Sentry from '@sentry/react'
 import './index.css'
 import App from './App.tsx'
+import { ThemeProvider } from './lib/theme.tsx'
 
 // Initialized as early as possible so Sentry can capture errors throughout
 // the app's lifecycle. Error monitoring only — no tracing, session replay,
@@ -19,9 +20,11 @@ const queryClient = new QueryClient()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

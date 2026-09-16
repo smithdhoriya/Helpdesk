@@ -1,3 +1,5 @@
+import { Search } from "lucide-react"
+
 import { Checkbox } from "@/components/ui/checkbox"
 import SelectField from "@/components/SelectField"
 import { Input } from "@/components/ui/input"
@@ -48,14 +50,20 @@ function TicketsFilterBar({
   onResolvedByAiChange,
 }: TicketsFilterBarProps) {
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-3">
-      <Input
-        value={searchInput}
-        onChange={(e) => onSearchInputChange(e.target.value)}
-        placeholder="Search subject or sender..."
-        className="w-64"
-        aria-label="Search tickets"
-      />
+    <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3">
+      <div className="relative w-64">
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+        />
+        <Input
+          value={searchInput}
+          onChange={(e) => onSearchInputChange(e.target.value)}
+          placeholder="Search subject or sender..."
+          className="pl-8"
+          aria-label="Search tickets"
+        />
+      </div>
 
       <SelectField
         items={statusItems}
@@ -77,7 +85,7 @@ function TicketsFilterBar({
         }
       />
 
-      <Label className="flex items-center gap-2 text-sm font-normal text-gray-700">
+      <Label className="ml-auto flex items-center gap-2 text-sm font-normal text-foreground">
         <Checkbox
           checked={filters.resolvedByAi ?? false}
           onCheckedChange={(checked) => onResolvedByAiChange(checked === true)}

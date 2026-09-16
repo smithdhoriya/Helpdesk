@@ -30,7 +30,7 @@ function TicketDetail() {
         ← Back to Tickets
       </Button>
 
-      {isError && <p className="mt-6 text-sm text-red-600">Failed to load ticket</p>}
+      {isError && <p className="mt-6 text-sm text-destructive">Failed to load ticket</p>}
 
       {isPending && (
         <div className="mt-6 space-y-4">
@@ -57,7 +57,9 @@ function TicketDetail() {
             </Card>
           </div>
 
-          <UpdateTicket ticket={ticket} />
+          <div>
+            <UpdateTicket ticket={ticket} />
+          </div>
         </div>
       )}
     </div>

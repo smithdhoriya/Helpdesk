@@ -34,7 +34,7 @@ function TicketsPerDayChart({ data }: TicketsPerDayChartProps) {
   return (
     <div className="w-full">
       <div
-        className="flex h-56 items-end gap-1 border-b border-gray-200"
+        className="flex h-56 items-end gap-1 border-b border-border"
         role="img"
         aria-label="Tickets created per day over the last 30 days"
       >
@@ -52,7 +52,7 @@ function TicketsPerDayChart({ data }: TicketsPerDayChartProps) {
               title={label}
             >
               <div
-                className="min-h-[2px] rounded-t bg-blue-500 transition-[height] group-hover:bg-blue-600"
+                className="min-h-[2px] rounded-t bg-primary transition-[height] group-hover:bg-primary/80"
                 style={{
                   height: day.count === 0 ? "0%" : `${Math.max(heightPercent, 4)}%`,
                 }}
@@ -64,7 +64,7 @@ function TicketsPerDayChart({ data }: TicketsPerDayChartProps) {
 
       {/* A sparse axis: labelling all 30 days would overlap, so show the first,
           last, and roughly every fifth day, evenly spaced under the bars. */}
-      <div className="mt-2 flex gap-1 text-xs text-gray-500">
+      <div className="mt-2 flex gap-1 text-xs text-muted-foreground">
         {data.map((day, index) => {
           const showLabel = index % 5 === 0 || index === data.length - 1
           return (

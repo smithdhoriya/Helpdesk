@@ -29,9 +29,9 @@ function UsersTable({
   onDelete,
 }: UsersTableProps) {
   return (
-    <div className="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div className="mt-6 rounded-lg border border-border bg-card">
       {isError && (
-        <p className="p-6 text-sm text-red-600">Failed to load users</p>
+        <p className="p-6 text-sm text-destructive">Failed to load users</p>
       )}
 
       {(isPending || users) && (
