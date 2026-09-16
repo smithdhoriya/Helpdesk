@@ -6,7 +6,7 @@ import request from "supertest";
 // operations the route handed it — the individual mocks below record the calls.
 vi.mock("../db", () => ({
   prisma: {
-    user: { findUnique: vi.fn(), update: vi.fn() },
+    user: { findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     session: { deleteMany: vi.fn() },
     ticket: { updateMany: vi.fn() },
     $transaction: vi.fn((operations: unknown[]) => Promise.all(operations)),
@@ -29,6 +29,7 @@ vi.mock("../middleware/require-auth", () => ({
 import { app } from "../app";
 import { prisma } from "../db";
 import { UserRole } from "../generated/client/enums";
+import { AI_AGENT_EMAIL, AI_AGENT_NAME, AI_AGENT_ROLE } from "../lib/ai-agent";
 
 const mockPrisma = vi.mocked(prisma, true);
 
@@ -45,6 +46,22 @@ beforeEach(() => {
   mockPrisma.$transaction.mockImplementation((operations: unknown) =>
     Promise.all(operations as unknown[]),
   );
+});
+
+describe("GET /api/users", () => {
+  it("excludes the AI agent from the returned users", async () => {
+    mockPrisma.user.findMany.mockResolvedValue([agent] as never);
+
+    const res = await request(app).get("/api/users");
+
+    expect(res.status).toBe(200);
+    expect(mockPrisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { deletedAt: null, email: { not: AI_AGENT_EMAIL } },
+      }),
+    );
+    expect(res.body).toEqual([agent]);
+  });
 });
 
 describe("DELETE /api/users/:id", () => {
@@ -102,6 +119,22 @@ describe("DELETE /api/users/:id", () => {
     } as never);
 
     const res = await request(app).delete("/api/users/admin-2");
+
+    expect(res.status).toBe(403);
+    expect(mockPrisma.ticket.updateMany).not.toHaveBeenCalled();
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("does not touch tickets when the target is the AI agent", async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      ...agent,
+      id: "ai-agent-1",
+      email: AI_AGENT_EMAIL,
+      name: AI_AGENT_NAME,
+      role: AI_AGENT_ROLE,
+    } as never);
+
+    const res = await request(app).delete("/api/users/ai-agent-1");
 
     expect(res.status).toBe(403);
     expect(mockPrisma.ticket.updateMany).not.toHaveBeenCalled();
