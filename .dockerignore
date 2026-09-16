@@ -1,0 +1,21 @@
+# Applies to both server/Dockerfile and client/Dockerfile, which build with
+# the repo root as context so they can reach the shared `core` workspace.
+node_modules
+**/node_modules
+.git
+**/dist
+**/build
+**/.env
+**/.env.*
+!**/.env.example
+*.log
+**/*.log
+.idea
+.vscode
+.agents
+**/.agents
+.claude
+**/.claude
+e2e
+**/tsconfig.tsbuildinfo
+**/.dev-*.log

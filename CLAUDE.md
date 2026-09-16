@@ -54,9 +54,7 @@ cd server && bun run dev
 ```
 
 ## Deployment
-Both apps are containerized with Docker and deployed to a cloud provider
-(Railway, Fly.io, or AWS), with PostgreSQL migrations run via
-`prisma migrate deploy`.
+Deployed to Railway as two Dockerized services (`server/Dockerfile`, `client/Dockerfile`) plus a Railway PostgreSQL plugin — see `DEPLOYMENT.md` for the full setup. Both Dockerfiles build with the **repo root as context**, not their own folder, since `client` and `server` both depend on the shared `core` workspace via `"core": "workspace:*"`. The server's Dockerfile `CMD` runs `prisma migrate deploy` before starting (no separate release phase on Railway); the client is a static Vite build served by a small Bun script (`client/serve.ts`) with SPA fallback to `index.html`.
 
 ## Testing
 - Default to component tests. Pure UI rendering (list rows, badges/labels, detail fields, loading/error states, client-side navigation on click) belongs in a component test, even when the feature was originally built alongside an E2E flow — see `client/src/pages/TicketDetail.test.tsx` and the trimmed `e2e/tests/inbound-email-ticket.spec.ts` for the split.

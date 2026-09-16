@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: helpdesk
+      POSTGRES_PASSWORD: helpdesk
+      POSTGRES_DB: helpdesk
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U helpdesk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_URL: postgres://helpdesk:helpdesk@postgres:5432/helpdesk
+      NODE_ENV: development
+      BETTER_AUTH_SECRET: local-dev-secret-change-me
+      BETTER_AUTH_URL: http://localhost:4000
+      TRUSTED_ORIGIN: http://localhost:4173
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: password123
+      ADMIN_NAME: Admin
+      INBOUND_EMAIL_WEBHOOK_SECRET: local-dev-webhook-secret
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: development
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:4000
+    depends_on:
+      - server
+    ports:
+      - "4173:4173"
+
+volumes:
+  postgres-data:
