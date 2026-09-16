@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { prisma } from "../db";
 import { UserRole } from "../generated/client/enums";
+import { AI_AGENT_EMAIL } from "../lib/ai-agent";
 import { sendValidationError } from "../lib/validation";
 
 export const usersRouter = Router();
@@ -25,8 +26,12 @@ const updateUserSchema = z.object({
 });
 
 usersRouter.get("/", async (_req, res) => {
+  // The AI agent (see `lib/ai-agent.ts`) is a real `User` row so tickets can be
+  // assigned to it, but it has no credentials and isn't a manageable account —
+  // exclude it here so it can't be accidentally edited or deleted from the
+  // admin user list. It still appears in the ticket assignee list.
   const users = await prisma.user.findMany({
-    where: { deletedAt: null },
+    where: { deletedAt: null, email: { not: AI_AGENT_EMAIL } },
     select: { id: true, name: true, email: true, role: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
@@ -132,6 +137,11 @@ usersRouter.delete("/:id", async (req, res) => {
 
   if (user.role === UserRole.admin) {
     res.status(403).json({ error: "Admin users cannot be deleted" });
+    return;
+  }
+
+  if (user.email === AI_AGENT_EMAIL) {
+    res.status(403).json({ error: "The AI agent cannot be deleted" });
     return;
   }
 
