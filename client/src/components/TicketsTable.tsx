@@ -24,6 +24,7 @@ import {
   ticketCategoryLabels,
   ticketStatusBadgeClassName,
   ticketStatusLabels,
+  UNCATEGORIZED_LABEL,
   type Ticket,
 } from "@/lib/tickets"
 
@@ -63,7 +64,7 @@ const columns = [
       const category = info.getValue()
       return (
         <Badge variant="outline" className="text-muted-foreground">
-          {category ? ticketCategoryLabels[category] : "Uncategorized"}
+          {category ? ticketCategoryLabels[category] : UNCATEGORIZED_LABEL}
         </Badge>
       )
     },

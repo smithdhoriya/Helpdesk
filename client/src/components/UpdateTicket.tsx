@@ -11,6 +11,7 @@ import {
   ticketQueryKey,
   TicketStatus,
   ticketStatusLabels,
+  UNCATEGORIZED_LABEL,
   updateTicket,
   type Ticket,
   type TicketUpdate,
@@ -25,7 +26,7 @@ const statusItems = Object.values(TicketStatus).map((status) => ({
 }))
 
 const categoryItems = [
-  { value: UNCATEGORIZED, label: "Uncategorized" },
+  { value: UNCATEGORIZED, label: UNCATEGORIZED_LABEL },
   ...Object.values(TicketCategory).map((category) => ({
     value: category,
     label: ticketCategoryLabels[category],
